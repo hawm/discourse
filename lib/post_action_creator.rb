@@ -155,6 +155,7 @@ private
   def auto_hide_if_needed
     return if @post.hidden?
     return if !@created_by.staff? && @post.user&.staff?
+    return unless PostActionType.auto_action_flag_types.include?(@post_action_name)
 
     # Special case: If you have TL3 and the user is TL0, and the flag is spam,
     # hide it immediately.
