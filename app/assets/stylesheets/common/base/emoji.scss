@@ -10,7 +10,8 @@ img.emoji.only-emoji {
   margin: 0.5em 0;
 }
 
-.md-table {
+.md-table,
+.poll {
   img.emoji.only-emoji {
     width: 20px;
     height: 20px;
@@ -44,6 +45,8 @@ sup img.emoji {
   justify-content: space-between;
   border-right: 1px solid $primary-low;
   min-width: 36px;
+  overflow-y: auto;
+  padding: 0.5em;
 }
 
 .emoji-picker .category-icon {

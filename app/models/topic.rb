@@ -96,6 +96,7 @@ class Topic < ActiveRecord::Base
   belongs_to :category
   has_many :category_users, through: :category
   has_many :posts
+  has_many :bookmarks
   has_many :ordered_posts, -> { order(post_number: :asc) }, class_name: "Post"
   has_many :topic_allowed_users
   has_many :topic_allowed_groups
@@ -150,6 +151,20 @@ class Topic < ActiveRecord::Base
 
   # Return private message topics
   scope :private_messages, -> { where(archetype: Archetype.private_message) }
+
+  PRIVATE_MESSAGES_SQL = <<~SQL
+    SELECT topic_id
+    FROM topic_allowed_users
+    WHERE user_id = :user_id
+    UNION ALL
+    SELECT tg.topic_id
+    FROM topic_allowed_groups tg
+    JOIN group_users gu ON gu.user_id = :user_id AND gu.group_id = tg.group_id
+  SQL
+
+  scope :private_messages_for_user, ->(user) {
+    private_messages.where("topics.id IN (#{PRIVATE_MESSAGES_SQL})", user_id: user.id)
+  }
 
   scope :listable_topics, -> { where('topics.archetype <> ?', Archetype.private_message) }
 
@@ -256,10 +271,14 @@ class Topic < ActiveRecord::Base
        self.category.auto_close_hours &&
        !public_topic_timer&.execute_at
 
+      based_on_last_post = self.category.auto_close_based_on_last_post
+      duration = based_on_last_post ? self.category.auto_close_hours : nil
+
       self.set_or_create_timer(
         TopicTimer.types[:close],
         self.category.auto_close_hours,
-        based_on_last_post: self.category.auto_close_based_on_last_post
+        based_on_last_post: based_on_last_post,
+        duration: duration
       )
     end
   end
@@ -501,6 +520,17 @@ class Topic < ActiveRecord::Base
   def update_status(status, enabled, user, opts = {})
     TopicStatusUpdater.new(self, user).update!(status, enabled, opts)
     DiscourseEvent.trigger(:topic_status_updated, self, status, enabled)
+
+    if enabled && private_message? && status.to_s["closed"]
+      group_ids = user.groups.pluck(:id)
+      if group_ids.present?
+        allowed_group_ids = self.allowed_groups
+          .where('topic_allowed_groups.group_id IN (?)', group_ids).pluck(:id)
+        allowed_group_ids.each do |id|
+          GroupArchivedMessage.archive!(id, self)
+        end
+      end
+    end
   end
 
   # Atomically creates the next post number
@@ -1120,8 +1150,8 @@ class Topic < ActiveRecord::Base
   #  * by_user: User who is setting the topic's status update.
   #  * based_on_last_post: True if time should be based on timestamp of the last post.
   #  * category_id: Category that the update will apply to.
-  def set_or_create_timer(status_type, time, by_user: nil, based_on_last_post: false, category_id: SiteSetting.uncategorized_category_id)
-    return delete_topic_timer(status_type, by_user: by_user) if time.blank?
+  def set_or_create_timer(status_type, time, by_user: nil, based_on_last_post: false, category_id: SiteSetting.uncategorized_category_id, duration: nil)
+    return delete_topic_timer(status_type, by_user: by_user) if time.blank? && duration.blank?
 
     public_topic_timer = !!TopicTimer.public_types[status_type]
     topic_timer_options = { topic: self, public_type: public_topic_timer }
@@ -1131,18 +1161,23 @@ class Topic < ActiveRecord::Base
 
     time_now = Time.zone.now
     topic_timer.based_on_last_post = !based_on_last_post.blank?
+    topic_timer.duration = duration
 
     if status_type == TopicTimer.types[:publish_to_category]
       topic_timer.category = Category.find_by(id: category_id)
     end
 
     if topic_timer.based_on_last_post
-      num_hours = time.to_f
-
-      if num_hours > 0
+      if duration > 0
         last_post_created_at = self.ordered_posts.last.present? ? self.ordered_posts.last.created_at : time_now
-        topic_timer.execute_at = last_post_created_at + num_hours.hours
+        topic_timer.execute_at = last_post_created_at + duration.hours
         topic_timer.created_at = last_post_created_at
+      end
+    elsif topic_timer.status_type == TopicTimer.types[:delete_replies]
+      if duration > 0
+        first_reply_created_at = (self.ordered_posts.where("post_number > 1").minimum(:created_at) || time_now)
+        topic_timer.execute_at = first_reply_created_at + duration.days
+        topic_timer.created_at = first_reply_created_at
       end
     else
       utc = Time.find_zone("UTC")
@@ -1429,7 +1464,9 @@ class Topic < ActiveRecord::Base
     Topic.transaction do
       rate_limit_topic_invitation(invited_by)
       topic_allowed_users.create!(user_id: target_user.id) unless topic_allowed_users.exists?(user_id: target_user.id)
-      add_small_action(invited_by, "invited_user", target_user.username)
+
+      user_in_allowed_group = (user.group_ids & topic_allowed_groups.map(&:group_id)).present?
+      add_small_action(invited_by, "invited_user", target_user.username) if !user_in_allowed_group
 
       create_invite_notification!(
         target_user,

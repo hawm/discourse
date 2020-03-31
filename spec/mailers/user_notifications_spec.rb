@@ -207,8 +207,7 @@ describe UserNotifications do
       it "uses theme color" do
         cs = Fabricate(:color_scheme, name: 'Fancy', color_scheme_colors: [
           Fabricate(:color_scheme_color, name: 'header_primary', hex: 'F0F0F0'),
-          Fabricate(:color_scheme_color, name: 'header_background', hex: '1E1E1E'),
-          Fabricate(:color_scheme_color, name: 'tertiary', hex: '858585')
+          Fabricate(:color_scheme_color, name: 'header_background', hex: '1E1E1E')
         ])
         theme = Fabricate(:theme,
                           user_selectable: true,
@@ -221,7 +220,6 @@ describe UserNotifications do
         html = subject.html_part.body.to_s
         expect(html).to include 'F0F0F0'
         expect(html).to include '1E1E1E'
-        expect(html).to include '858585'
       end
 
       it "supports subfolder" do
@@ -970,7 +968,7 @@ describe UserNotifications do
   end
 
   # notification emails derived from templates are translated into the user's locale
-  shared_examples "notification derived from template" do
+  shared_context "notification derived from template" do
     let(:user) { Fabricate(:user, locale: locale) }
     let(:mail_type) { mail_type }
     let(:notification) { Fabricate(:notification, user: user) }

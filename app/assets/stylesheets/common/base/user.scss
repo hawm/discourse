@@ -703,7 +703,7 @@
 }
 
 .primary-textual .staged,
-#user-card .staged {
+.user-card .staged {
   font-style: italic;
 }
 
@@ -723,4 +723,8 @@
       }
     }
   }
+}
+
+.timezone-input {
+  margin-bottom: 0.5em;
 }

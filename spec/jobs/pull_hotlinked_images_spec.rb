@@ -44,7 +44,7 @@ describe Jobs::PullHotlinkedImages do
 
       freeze_time 1.week.from_now
       Jobs::PullHotlinkedImages.new.execute(post_id: post.id)
-      expect(orig).to be_within(1.second).of(post.reload.updated_at)
+      expect(orig).to eq_time(post.reload.updated_at)
     end
 
     it 'replaces images' do
@@ -81,6 +81,17 @@ describe Jobs::PullHotlinkedImages do
                                     ![somelink](#{upload.short_url})
                                 </a>
       RAW
+    end
+
+    it 'replaces correct image URL' do
+      url = image_url.sub("/2e/Longcat1.png", '')
+      post = Fabricate(:post, raw: "[Images](#{url})\n![](#{image_url})")
+
+      expect do
+        Jobs::PullHotlinkedImages.new.execute(post_id: post.id)
+      end.to change { Upload.count }.by(1)
+
+      expect(post.reload.raw).to eq("[Images](#{url})\n![](#{Upload.last.short_url})")
     end
 
     it 'replaces images without protocol' do

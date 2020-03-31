@@ -597,6 +597,14 @@ describe Email::Receiver do
       MD
     end
 
+    it "works with removed attachments" do
+      SiteSetting.authorized_extensions = "jpg"
+
+      expect { process(:removed_attachments) }.to change { topic.posts.count }
+      post = topic.posts.last
+      expect(post.uploads).to be_empty
+    end
+
     it "supports eml attachments" do
       SiteSetting.authorized_extensions = "eml"
       expect { process(:attached_eml_file) }.to change { topic.posts.count }
@@ -648,8 +656,11 @@ describe Email::Receiver do
     end
 
     it "ensures posts aren't dated in the future" do
+      # PostCreator doesn't provide sub-second accuracy for created_at
+      now = freeze_time Time.zone.now.round
+
       expect { process(:from_the_future) }.to change { topic.posts.count }
-      expect(topic.posts.last.created_at).to be_within(1.minute).of(DateTime.now)
+      expect(topic.posts.last.created_at).to eq_time(now)
     end
 
     it "accepts emails with wrong reply key if the system knows about the forwarded email" do
@@ -880,6 +891,18 @@ describe Email::Receiver do
         expect { process(:forwarded_email_3) }.to change(Topic, :count)
       end
 
+      it "adds a small action post to explain who forwarded the email when the sender didn't write anything" do
+        expect { process(:forwarded_email_4) }.to change(Topic, :count)
+
+        forwarded_post, last_post = *Post.last(2)
+
+        expect(forwarded_post.user.email).to eq("some@one.com")
+        expect(forwarded_post.raw).to match(/XoXo/)
+
+        expect(last_post.user.email).to eq("ba@bar.com")
+        expect(last_post.post_type).to eq(Post.types[:small_action])
+        expect(last_post.action_code).to eq("forwarded")
+      end
     end
 
     context "with forwarded emails behaviour set to quote" do

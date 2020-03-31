@@ -18,6 +18,7 @@ Discourse::Application.routes.draw do
   post "webhooks/mailgun"  => "webhooks#mailgun"
   post "webhooks/mailjet"  => "webhooks#mailjet"
   post "webhooks/mandrill" => "webhooks#mandrill"
+  post "webhooks/postmark" => "webhooks#postmark"
   post "webhooks/sendgrid" => "webhooks#sendgrid"
   post "webhooks/sparkpost" => "webhooks#sparkpost"
 
@@ -139,7 +140,6 @@ Discourse::Application.routes.draw do
     get 'users/:id/:username/tl3_requirements' => 'users#show'
 
     post "users/sync_sso" => "users#sync_sso", constraints: AdminConstraint.new
-    post "users/invite_admin" => "users#invite_admin", constraints: AdminConstraint.new
 
     resources :impersonate, constraints: AdminConstraint.new
 
@@ -348,7 +348,6 @@ Discourse::Application.routes.draw do
   get "session/otp/:token" => "session#one_time_password", constraints: { token: /[0-9a-f]+/ }
   post "session/otp/:token" => "session#one_time_password", constraints: { token: /[0-9a-f]+/ }
   get "composer_messages" => "composer_messages#index"
-  post "composer/parse_html" => "composer#parse_html"
 
   resources :static
   post "login" => "static#enter"
@@ -367,6 +366,8 @@ Discourse::Application.routes.draw do
   get "my/*path", to: 'users#my_redirect'
   get "user_preferences" => "users#user_preferences_redirect"
   get ".well-known/change-password", to: redirect(relative_url_root + 'my/preferences/account', status: 302)
+
+  get "user-cards" => "users#cards", format: :json
 
   %w{users u}.each_with_index do |root_path, index|
     get "#{root_path}" => "users#index", constraints: { format: 'html' }
@@ -468,6 +469,7 @@ Discourse::Application.routes.draw do
     get "#{root_path}/:username/activity" => "users#show", constraints: { username: RouteFormat.username }
     get "#{root_path}/:username/activity/:filter" => "users#show", constraints: { username: RouteFormat.username }
     get "#{root_path}/:username/badges" => "users#badges", constraints: { username: RouteFormat.username }
+    get "#{root_path}/:username/bookmarks" => "users#bookmarks", constraints: { username: RouteFormat.username, format: /(json|ics)/ }
     get "#{root_path}/:username/notifications" => "users#show", constraints: { username: RouteFormat.username }
     get "#{root_path}/:username/notifications/:filter" => "users#show", constraints: { username: RouteFormat.username }
     delete "#{root_path}/:username" => "users#destroy", constraints: { username: RouteFormat.username }
@@ -492,6 +494,7 @@ Discourse::Application.routes.draw do
 
   get "svg-sprite/:hostname/svg-:theme_ids-:version.js" => "svg_sprite#show", constraints: { hostname: /[\w\.-]+/, version: /\h{40}/, theme_ids: /([0-9]+(,[0-9]+)*)?/, format: :js }
   get "svg-sprite/search/:keyword" => "svg_sprite#search", format: false, constraints: { keyword: /[-a-z0-9\s\%]+/ }
+  get "svg-sprite/picker-search" => "svg_sprite#icon_picker_search", defaults: { format: :json }
 
   get "highlight-js/:hostname/:version.js" => "highlight_js#show", constraints: { hostname: /[\w\.-]+/, format: :js }
 
@@ -597,7 +600,7 @@ Discourse::Application.routes.draw do
     end
   end
 
-  resources :bookmarks, only: %i[create]
+  resources :bookmarks, only: %i[create destroy]
 
   resources :notifications, except: :show do
     collection do
@@ -950,6 +953,8 @@ Discourse::Application.routes.draw do
   post "/push_notifications/unsubscribe" => "push_notification#unsubscribe"
 
   resources :csp_reports, only: [:create]
+
+  get "/permalink-check", to: 'permalinks#check'
 
   get "*url", to: 'permalinks#show', constraints: PermalinkConstraint.new
   end

@@ -37,6 +37,7 @@ class Post < ActiveRecord::Base
   has_many :uploads, through: :post_uploads
 
   has_one :post_stat
+  has_many :bookmarks
 
   has_one :incoming_email
 
@@ -68,15 +69,7 @@ class Post < ActiveRecord::Base
   register_custom_field_type(MISSING_UPLOADS_IGNORED, :boolean)
 
   scope :private_posts_for_user, ->(user) {
-    where("posts.topic_id IN (SELECT topic_id
-             FROM topic_allowed_users
-             WHERE user_id = :user_id
-             UNION ALL
-             SELECT tg.topic_id
-             FROM topic_allowed_groups tg
-             JOIN group_users gu ON gu.user_id = :user_id AND
-                                      gu.group_id = tg.group_id)",
-                                              user_id: user.id)
+    where("posts.topic_id IN (#{Topic::PRIVATE_MESSAGES_SQL})", user_id: user.id)
   }
 
   scope :by_newest, -> { order('created_at DESC, id DESC') }
@@ -713,7 +706,7 @@ class Post < ActiveRecord::Base
       self.cooked = cook(raw, topic_id: topic_id)
     end
 
-    self.baked_at = Time.new
+    self.baked_at = Time.zone.now
     self.baked_version = BAKED_VERSION
   end
 
@@ -819,9 +812,11 @@ class Post < ActiveRecord::Base
         UNION
         SELECT reply_post_id, level + 1
         FROM post_replies AS r
+          JOIN posts AS p ON p.id = reply_post_id
           JOIN breadcrumb AS b ON (r.post_id = b.id)
         WHERE r.post_id <> r.reply_post_id
-              AND b.level < :max_reply_level
+          AND b.level < :max_reply_level
+          AND p.topic_id = :topic_id
       ), breadcrumb_with_count AS (
           SELECT
             id,
@@ -832,9 +827,10 @@ class Post < ActiveRecord::Base
           WHERE r.reply_post_id <> r.post_id
           GROUP BY id, level
       )
-      SELECT id, level
+      SELECT id, MIN(level) AS level
       FROM breadcrumb_with_count
       /*where*/
+      GROUP BY id
       ORDER BY id
     SQL
 
@@ -844,7 +840,7 @@ class Post < ActiveRecord::Base
     # for example it skips a post when it contains 2 quotes (which are replies) from different posts
     builder.where("count = 1") if only_replies_to_single_post
 
-    replies = builder.query_hash(post_id: id, max_reply_level: MAX_REPLY_LEVEL)
+    replies = builder.query_hash(post_id: id, max_reply_level: MAX_REPLY_LEVEL, topic_id: topic_id)
     replies.each { |r| r.symbolize_keys! }
 
     secured_ids = Post.secured(guardian).where(id: replies.map { |r| r[:id] }).pluck(:id).to_set
@@ -912,7 +908,11 @@ class Post < ActiveRecord::Base
       end
 
       if SiteSetting.secure_media?
-        Upload.where(id: upload_ids, access_control_post_id: nil).update_all(
+        Upload.where(
+          id: upload_ids, access_control_post_id: nil
+        ).where(
+          'id NOT IN (SELECT upload_id FROM custom_emojis)'
+        ).update_all(
           access_control_post_id: self.id
         )
       end
@@ -941,8 +941,9 @@ class Post < ActiveRecord::Base
     ]
 
     fragments ||= Nokogiri::HTML::fragment(self.cooked)
+    selectors = fragments.css("a/@href", "img/@src", "source/@src", "track/@src", "video/@poster")
 
-    links = fragments.css("a/@href", "img/@src").map do |media|
+    links = selectors.map do |media|
       src = media.value
       next if src.blank?
 

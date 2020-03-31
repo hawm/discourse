@@ -136,6 +136,12 @@ class PostCreator
       return false unless skip_validations? || validate_child(topic_creator)
     else
       @topic = Topic.find_by(id: @opts[:topic_id])
+
+      if @topic.present? && @opts[:archetype] == Archetype.private_message
+        errors.add(:base, I18n.t(:create_pm_on_existing_topic))
+        return false
+      end
+
       unless @topic.present? && (@opts[:skip_guardian] || guardian.can_create?(Post, @topic))
         errors.add(:base, I18n.t(:topic_not_found))
         return false
@@ -373,9 +379,8 @@ class PostCreator
   end
 
   def update_uploads_secure_status
-    if SiteSetting.secure_media? || SiteSetting.prevent_anons_from_downloading_files?
-      @post.update_uploads_secure_status
-    end
+    return if !SiteSetting.secure_media?
+    @post.update_uploads_secure_status
   end
 
   def handle_spam
@@ -464,11 +469,12 @@ class PostCreator
 
       if topic_timer &&
          topic_timer.based_on_last_post &&
-         topic_timer.duration > 0
+         topic_timer.duration.to_i > 0
 
         @topic.set_or_create_timer(TopicTimer.types[:close],
-          topic_timer.duration,
-          based_on_last_post: topic_timer.based_on_last_post
+          nil,
+          based_on_last_post: topic_timer.based_on_last_post,
+          duration: topic_timer.duration
         )
       end
     end
@@ -488,7 +494,12 @@ class PostCreator
     end
 
     post.extract_quoted_post_numbers
-    post.created_at = Time.zone.parse(@opts[:created_at].to_s) if @opts[:created_at].present?
+
+    post.created_at = if @opts[:created_at].is_a?(Time)
+      @opts[:created_at]
+    elsif @opts[:created_at].present?
+      Time.zone.parse(@opts[:created_at].to_s)
+    end
 
     if fields = @opts[:custom_fields]
       post.custom_fields = fields

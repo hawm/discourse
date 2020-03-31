@@ -21,26 +21,15 @@ class UploadSecurity
   end
 
   def should_be_secure?
+    return false if !SiteSetting.secure_media?
     return false if uploading_in_public_context?
-    secure_attachment? || secure_media?
+    uploading_in_secure_context?
   end
 
   private
 
   def uploading_in_public_context?
-    @upload.for_theme || @upload.for_site_setting || @upload.for_gravatar || public_type?
-  end
-
-  def supported_media?
-    FileHelper.is_supported_media?(@upload.original_filename)
-  end
-
-  def secure_attachment?
-    !supported_media? && SiteSetting.prevent_anons_from_downloading_files
-  end
-
-  def secure_media?
-    SiteSetting.secure_media? && supported_media? && uploading_in_secure_context?
+    @upload.for_theme || @upload.for_site_setting || @upload.for_gravatar || public_type? || used_for_custom_emoji? || based_on_regular_emoji?
   end
 
   def uploading_in_secure_context?
@@ -69,5 +58,16 @@ class UploadSecurity
 
   def uploading_in_composer?
     @upload_type == "composer"
+  end
+
+  def used_for_custom_emoji?
+    @upload.id.present? && CustomEmoji.exists?(upload_id: @upload.id)
+  end
+
+  def based_on_regular_emoji?
+    return false if @upload.origin.blank?
+    uri = URI.parse(@upload.origin)
+    return true if Emoji.all.map(&:url).include?("#{uri.path}?#{uri.query}")
+    uri.path.include?("images/emoji")
   end
 end

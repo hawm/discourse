@@ -3,6 +3,7 @@
 require 'guardian/category_guardian'
 require 'guardian/ensure_magic'
 require 'guardian/post_guardian'
+require 'guardian/bookmark_guardian'
 require 'guardian/topic_guardian'
 require 'guardian/user_guardian'
 require 'guardian/post_revision_guardian'
@@ -14,6 +15,7 @@ class Guardian
   include EnsureMagic
   include CategoryGuardian
   include PostGuardian
+  include BookmarkGuardian
   include TopicGuardian
   include UserGuardian
   include PostRevisionGuardian
@@ -327,6 +329,10 @@ class Guardian
 
   def can_see_invite_details?(user)
     is_me?(user)
+  end
+
+  def can_see_invite_emails?(user)
+    is_staff? || is_me?(user)
   end
 
   def can_invite_to_forum?(groups = nil)

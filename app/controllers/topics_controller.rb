@@ -342,6 +342,8 @@ class TopicsController < ApplicationController
             end
           end
 
+          invalid_tags = Tag.where_name(invalid_tags).pluck(:name)
+
           if !invalid_tags.empty?
             if (invalid_tags & DiscourseTagging.hidden_tag_names).present?
               return render_json_error(I18n.t('category.errors.disallowed_tags_generic'))
@@ -366,7 +368,7 @@ class TopicsController < ApplicationController
 
     if changes.length > 0
       first_post = topic.ordered_posts.first
-      success = PostRevisor.new(first_post, topic).revise!(current_user, changes, validate_post: false)
+      success = PostRevisor.new(first_post).revise!(current_user, changes, validate_post: false)
     end
 
     # this is used to return the title to the client as it may have been changed by "TextCleaner"
@@ -435,16 +437,19 @@ class TopicsController < ApplicationController
       rescue
         invalid_param(:status_type)
       end
+    based_on_last_post = params[:based_on_last_post]
+    params.require(:duration) if based_on_last_post || TopicTimer.types[:delete_replies] == status_type
 
     topic = Topic.find_by(id: params[:topic_id])
     guardian.ensure_can_moderate!(topic)
 
     options = {
       by_user: current_user,
-      based_on_last_post: params[:based_on_last_post]
+      based_on_last_post: based_on_last_post
     }
 
     options.merge!(category_id: params[:category_id]) if !params[:category_id].blank?
+    options.merge!(duration: params[:duration].to_i) if params[:duration].present?
 
     topic_status_update = topic.set_or_create_timer(
       status_type,
@@ -486,11 +491,15 @@ class TopicsController < ApplicationController
   def remove_bookmarks
     topic = Topic.find(params[:topic_id].to_i)
 
-    PostAction.joins(:post)
-      .where(user_id: current_user.id)
-      .where('topic_id = ?', topic.id).each do |pa|
+    if SiteSetting.enable_bookmarks_with_reminders?
+      BookmarkManager.new(current_user).destroy_for_topic(topic)
+    else
+      PostAction.joins(:post)
+        .where(user_id: current_user.id)
+        .where('topic_id = ?', topic.id).each do |pa|
 
-      PostActionDestroyer.destroy(current_user, pa.post, :bookmark)
+        PostActionDestroyer.destroy(current_user, pa.post, :bookmark)
+      end
     end
 
     render body: nil
@@ -543,8 +552,17 @@ class TopicsController < ApplicationController
     topic = Topic.find(params[:topic_id].to_i)
     first_post = topic.ordered_posts.first
 
-    result = PostActionCreator.create(current_user, first_post, :bookmark)
-    return render_json_error(result) if result.failed?
+    if SiteSetting.enable_bookmarks_with_reminders?
+      bookmark_manager = BookmarkManager.new(current_user)
+      bookmark_manager.create(post_id: first_post.id)
+
+      if bookmark_manager.errors.any?
+        return render_json_error(bookmark_manager, status: 400)
+      end
+    else
+      result = PostActionCreator.create(current_user, first_post, :bookmark)
+      return render_json_error(result) if result.failed?
+    end
 
     render body: nil
   end

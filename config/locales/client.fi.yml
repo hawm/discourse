@@ -153,6 +153,7 @@ fi:
       banner:
         enabled: "teki tästä bannerin %{when}. Se näytetään jokaisen sivun ylälaidassa, kunnes käyttäjä kuittaa sen nähdyksi."
         disabled: "poisti tämän bannerin %{when}. Sitä ei enää näytetä jokaisen sivun ylälaidassa."
+      forwarded: "välitti yllä olevan sähköpostin"
     topic_admin_menu: "ketjun työkalut"
     wizard_required: "Tervetuloa uuteen Discourseesi! Aloitetaan <a href='%{url}' data-auto-route='true'>ohjattu asennus</a> ✨"
     emails_are_disabled: "Ylläpitäjä on estänyt kaiken lähtevän sähköpostiliikenteen. Mitään sähköposti-ilmoituksia ei lähetetä."
@@ -385,6 +386,8 @@ fi:
       deleted_post: "(viesti poistettu)"
       deleted_user: "(käyttäjä poistettu)"
       user:
+        bio: "Käyttäjätiedot"
+        website: "Nettisivu"
         username: "Käyttäjätunnus"
         email: "Sähköposti"
         name: "Nimi"
@@ -577,7 +580,7 @@ fi:
       request: "Pyyntö"
       message: "Viesti"
       confirm_leave: "Haluatko varmasti poistua ryhmästä?"
-      allow_membership_requests: "Salli käyttäjän lähettää jäsenhakemuksia ryhmien isännille"
+      allow_membership_requests: "Salli käyttäjän lähettää jäsenhakemuksia ryhmien isännille (Vaatii sen, että ryhmä on julkinen)"
       membership_request_template: "Viestipohja, joka näytetään käyttäjälle, kun hän lähettää jäsenhakemusta ryhmään."
       membership_request:
         submit: "Lähetä hakemus"
@@ -1257,9 +1260,6 @@ fi:
       enabled: "Sivusto on vain luku -tilassa. Voit jatkaa selailua, mutta vastaaminen, tykkääminen ja muita toimintoja on toistaiseksi poissa käytöstä."
       login_disabled: "Et voi kirjautua sisään, kun sivusto on vain luku -tilassa."
       logout_disabled: "Et voi kirjautua ulos, kun sivusto on vain luku -tilassa."
-    too_few_topics_and_posts_notice: "Laitetaanpa <a href='https://blog.discourse.org/2014/08/building-a-discourse-community/'>keskustelu alulle!</a> Tällä hetkellä palstalla on <strong>%{currentTopics}</strong> ketjua ja <strong>%{currentPosts}</strong> viestiä. Uusia kävijöitä varten tarvitaan lisää keskusteluita, joita voivat lukea ja joihin vastata. Suosittelemme vähintään <strong>%{requiredTopics}</strong> ketjua ja <strong>%{requiredPosts}</strong> viestiä. Vain henkilökunta näkee tämän viestin."
-    too_few_topics_notice: "Laitetaanpa <a href='https://blog.discourse.org/2014/08/building-a-discourse-community/'>keskustelu alulle!</a> Tällä hetkellä palstalla on <strong>%{currentTopics}</strong> ketjua. Uusia kävijöitä varten tarvitaan lisää keskusteluita, joita voivat lukea ja joihin vastata. Suosittelemme vähintään <strong>%{requiredTopics}</strong> ketjua. Vain henkilökunta näkee tämän viestin."
-    too_few_posts_notice: "Laitetaanpa <a href='https://blog.discourse.org/2014/08/building-a-discourse-community/'>keskustelu alulle!</a> Tällä hetkellä palstalla on <strong>%{currentPosts}</strong> viestiä. Uusia kävijöitä varten tarvitaan lisää keskusteluita, joita voivat lukea ja joihin vastata. Suosittelemme vähintään <strong>%{requiredPosts}</strong> viestiä. Vain henkilökunta näkee tämän viestin."
     logs_error_rate_notice:
       reached_hour_MF: "<b>{relativeAge}</b> – <a href='{url}' target='_blank'>{rate, plural, one {# virhe/tunti} other {# virhettä/tunti}}</a> saavutti sivustoasetuskynnyksen {limit, plural, one {# virhe/tunti} other {# virhettä/tunti}}."
       reached_minute_MF: "<b>{relativeAge}</b> – <a href='{url}' target='_blank'>{rate, plural, one {# virhe/minuutti} other {# virhettä/minuutti}}</a> saavutti sivustoasetuskynnyksen {limit, plural, one {# virhe/minuutti} other {# virhettä/minuutti}}."
@@ -1464,6 +1464,7 @@ fi:
       min_content_not_reached:
         one: "Valitse ainakin {{count}} kohde."
         other: "Valitse ainakin {{count}} kohdetta."
+      invalid_selection_length: "Täytyy valita ainakin {{count}} merkkiä."
     date_time_picker:
       from: Mistä
       to: Vastaanottaja
@@ -1553,7 +1554,7 @@ fi:
       view_new_post: "Katsele uutta viestiäsi."
       saving: "Tallennetaan"
       saved: "Tallennettu!"
-      saved_draft: "Viestiluonnos kesken. Jatka klikkaamalla tästä."
+      saved_draft: "Viestiluonnos kesken. Jatka klikkaamalla."
       uploading: "Lähettää..."
       show_preview: "näytä esikatselu &raquo;"
       hide_preview: "&laquo; piilota esikatselu"
@@ -1603,6 +1604,7 @@ fi:
         reply_as_new_topic:
           label: Vastaa sivuavassa ketjussa
           desc: "Aloita uusi, tähän ketjuun linkittyvä ketju"
+          confirm: "Tallennettuna on yksi sinun ketjunaloitusluonnos, joka poistetaan, jos vastaat uudessa ketjussa."
         reply_as_private_message:
           label: Uusi viesti
           desc: Aloita uusi yksityiskeskustelu
@@ -2415,6 +2417,10 @@ fi:
         name: "Nimi"
         name_placeholder: "Anna kirjanmerkille nimi muistisi virkistämiseksi"
         set_reminder: "Aseta muistutus"
+        actions:
+          delete_bookmark:
+            name: "Poista kirjanmerkki"
+            description: "Poistaa kirjanmerkin profiilistasi ja kumoaa kaikki kirjanmerkkiin liittyvät muistutukset"
     category:
       can: "voivat&hellip; "
       none: "(ei aluetta)"
@@ -2616,6 +2622,7 @@ fi:
         help: "Tämä ketju on poistettu listauksista; sitä ei näytetä ketjulistauksissa vaan siihen pääsee vain suoran linkin kautta"
       personal_message:
         title: "Tämä ketju on yksityiskeskustelu"
+        help: "Tämä ketju on yksityiskeskustelu"
     posts: "Viestejä"
     posts_long: "tässä ketjussa on {{number}} viestiä"
     posts_likes_MF: |
@@ -2829,15 +2836,6 @@ fi:
           name: Muut
         posting:
           name: Kirjoittaminen
-    google_search: |
-      <h3>Etsi Googlella</h3>
-      <p>
-      <form action='//google.com/search' id='google-search' onsubmit="document.getElementById('google-query').value = 'site:' + window.location.host + ' ' + document.getElementById('user-query').value; return true;">
-      <input type="text" id='user-query' value="">
-      <input type='hidden' id='google-query' name="q">
-      <button class="btn btn-primary">Google</button>
-      </form>
-      </p>
     tagging:
       all_tags: "Kaikki tunnisteet"
       other_tags: "Muut tunnisteet"
@@ -2848,6 +2846,7 @@ fi:
       choose_for_topic: "ei-pakolliset tunnisteet"
       info: "Tietoa"
       default_info: "Tätä tunnistetta ei ole rajattu millekään alueelle eikä sillä ole synonyymejä."
+      category_restricted: "Tämä tunniste on rajoitettu alueille, joille sinulla ei ole pääsyoikeutta."
       synonyms: "Synonyymit"
       synonyms_description: "Kun näitä tunnisteita käytetään, ne korvataan pääsynonyymillä <b>%{base_tag_name}</b>."
       tag_groups_info:
@@ -2859,6 +2858,9 @@ fi:
       edit_synonyms: "Hallinnoi synonyymejä"
       add_synonyms_label: "Lisää synonyymejä:"
       add_synonyms: "Lisää"
+      add_synonyms_explanation:
+        one: "Kaikkialla missä tätä tunnistetta käytetään, vaihdetaan tunnisteeksi <b>%{tag_name}</b>. Haluatko varmasti tehdä tämän vaihdoksen?"
+        other: "Kaikkialla missä näitä tunnisteita nykyisin käytetään, vaihdetaan tunnisteeksi <b>%{tag_name}</b>. Haluatko varmasti tehdä tämän vaihdoksen?"
       add_synonyms_failed: "Näitä tunnisteita ei voitu lisätä synonyymeiksi: <b>%{tag_names}</b>. Varmistu, ettei niillä itsellään ole synonyymejä ja ettei ne ole synonyymejä muulle tunnisteelle."
       remove_synonym: "Poista synonyymi"
       delete_synonym_confirm: 'Haluatko varmasti poistaa synonyymin "%{tag_name}"?'
@@ -3380,6 +3382,7 @@ fi:
           mobile: "Mobiili"
           settings: "Asetukset"
           translations: "Käännökset"
+          extra_scss: "Lisä-SCSS"
           preview: "Esikatselu"
           show_advanced: "Näytä lisäasetukset"
           hide_advanced: "Piilota lisäasetukset"
@@ -3549,6 +3552,7 @@ fi:
           reset: "Palauta oletus"
           reset_confirm: "Oletko varma että haluat palauttaa oletus %{fieldName} ja hylätä kaikki tekemästi muutokset?"
           save_error_with_reason: "Muutoksia ei tallennettu. %{error}"
+          instructions: "Muotoile CSS:n keinoin HTML-pohjaa, jolle kaikkien HTML-sähköpostit rakennetaan."
       email:
         title: "Sähköpostit"
         settings: "Asetukset"
@@ -4211,9 +4215,8 @@ fi:
           description: Myönnä sama ansiomerkki useille käyttäjille samalla kertaa.
           no_badge_selected: Aloita valitsemalla ansiomerkki.
           perform: "Myönnä ansiomerkki käyttäjille"
-          upload_csv: Lataa CSV sähköpostiosoitteista
-          aborted: "Lataa CSV, jossa on käyttäjien sähköpostiosoitteet"
           success: CSV tuli perille ja käyttäjät saavat ansiomerkkinsä pian.
+          replace_owners: Poista ansiomerkki aiemmilta omistajilta
       emoji:
         title: "Emoji"
         help: "Lisää uusi emoji joka on kaikkien käytettävissä. (Voit raahata useita tiedostoja kerralla)"

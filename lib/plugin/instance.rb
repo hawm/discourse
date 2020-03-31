@@ -6,21 +6,29 @@ require_dependency 'plugin/metadata'
 require_dependency 'auth'
 
 class Plugin::CustomEmoji
+  CACHE_KEY ||= "plugin-emoji"
   def self.cache_key
-    @@cache_key ||= "plugin-emoji"
+    @@cache_key ||= CACHE_KEY
   end
 
   def self.emojis
     @@emojis ||= {}
   end
 
-  def self.register(name, url)
-    @@cache_key = Digest::SHA1.hexdigest(cache_key + name)[0..10]
-    emojis[name] = url
+  def self.clear_cache
+    @@cache_key = CACHE_KEY
+    @@emojis = {}
   end
 
-  def self.unregister(name)
-    emojis.delete(name)
+  def self.register(name, url, group = Emoji::DEFAULT_GROUP)
+    @@cache_key = Digest::SHA1.hexdigest(cache_key + name + group)[0..10]
+    new_group = emojis[group] || {}
+    new_group[name] = url
+    emojis[group] = new_group
+  end
+
+  def self.unregister(name, group = Emoji::DEFAULT_GROUP)
+    emojis[group].delete(name)
   end
 
   def self.translations
@@ -49,6 +57,7 @@ class Plugin::Instance
    :styles,
    :themes,
    :csp_extensions,
+   :asset_filters
  ].each do |att|
     class_eval %Q{
       def #{att}
@@ -413,6 +422,14 @@ class Plugin::Instance
     csp_extensions << extension
   end
 
+  # Register a block to run when adding css and js assets
+  # Two arguments will be passed: (type, request)
+  # Type is :css or :js. `request` is an instance of Rack::Request
+  # When using this, make sure to consider the effect on AnonymousCache
+  def register_asset_filter(&blk)
+    asset_filters << blk
+  end
+
   # @option opts [String] :name
   # @option opts [String] :nativeName
   # @option opts [String] :fallbackLocale
@@ -462,8 +479,9 @@ class Plugin::Instance
     DiscoursePluginRegistry.register_seed_path_builder(&block)
   end
 
-  def register_emoji(name, url)
-    Plugin::CustomEmoji.register(name, url)
+  def register_emoji(name, url, group = Emoji::DEFAULT_GROUP)
+    Plugin::CustomEmoji.register(name, url, group)
+    Emoji.clear_cache
   end
 
   def translate_emoji(from, to)
@@ -497,10 +515,12 @@ class Plugin::Instance
       root_path = "#{File.dirname(@path)}/assets/javascripts"
       DiscoursePluginRegistry.register_glob(root_path, 'js.es6')
       DiscoursePluginRegistry.register_glob(root_path, 'hbs')
+      DiscoursePluginRegistry.register_glob(root_path, 'hbr')
 
       admin_path = "#{File.dirname(@path)}/admin/assets/javascripts"
       DiscoursePluginRegistry.register_glob(admin_path, 'js.es6', admin: true)
       DiscoursePluginRegistry.register_glob(admin_path, 'hbs', admin: true)
+      DiscoursePluginRegistry.register_glob(admin_path, 'hbr', admin: true)
     end
 
     self.instance_eval File.read(path), path
@@ -541,12 +561,11 @@ class Plugin::Instance
 
       Discourse::Utils.execute_command('mkdir', '-p', target)
       target << name.gsub(/\s/, "_")
-      # TODO a cleaner way of registering and unregistering
-      Discourse::Utils.execute_command('rm', '-f', target)
-      Discourse::Utils.execute_command('ln', '-s', public_data, target)
+
+      Discourse::Utils.atomic_ln_s(public_data, target)
     end
 
-    ensure_directory(Plugin::Instance.js_path)
+    ensure_directory(js_file_path)
 
     contents = []
     handlebars_includes.each { |hb| contents << "require_asset('#{hb}')" }
@@ -556,12 +575,15 @@ class Plugin::Instance
       contents << (is_dir ? "depend_on('#{f}')" : "require_asset('#{f}')")
     end
 
-    File.delete(js_file_path) if js_asset_exists?
-
     if contents.present?
       contents.insert(0, "<%")
       contents << "%>"
-      write_asset(js_file_path, contents.join("\n"))
+      Discourse::Utils.atomic_write_file(js_file_path, contents.join("\n"))
+    else
+      begin
+        File.delete(js_file_path)
+      rescue Errno::ENOENT
+      end
     end
   end
 
@@ -643,7 +665,7 @@ class Plugin::Instance
       Dir.glob("#{root_path}/**/*") do |f|
         if File.directory?(f)
           yield [f, true]
-        elsif f.to_s.ends_with?(".js.es6") || f.to_s.ends_with?(".hbs")
+        elsif f.to_s.ends_with?(".js.es6") || f.to_s.ends_with?(".hbs") || f.to_s.ends_with?(".hbr")
           yield [f, false]
         end
       end

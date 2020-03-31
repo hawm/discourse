@@ -60,9 +60,12 @@ class ThemeField < ActiveRecord::Base
   validates :name, format: { with: /\A[a-z_][a-z0-9_-]*\z/i },
                    if: Proc.new { |field| ThemeField.theme_var_type_ids.include?(field.type_id) }
 
-  BASE_COMPILER_VERSION = 14
-  DEPENDENT_CONSTANTS = [BASE_COMPILER_VERSION,
-                        GlobalSetting.cdn_url]
+  BASE_COMPILER_VERSION = 15
+  DEPENDENT_CONSTANTS = [
+    BASE_COMPILER_VERSION,
+    Ember::VERSION,
+    GlobalSetting.cdn_url
+  ]
   COMPILER_VERSION = Digest::SHA1.hexdigest(DEPENDENT_CONSTANTS.join)
 
   belongs_to :theme
@@ -79,7 +82,7 @@ class ThemeField < ActiveRecord::Base
 
     doc.css('script[type="text/x-handlebars"]').each do |node|
       name = node["name"] || node["data-template-name"] || "broken"
-      is_raw = name =~ /\.raw$/
+      is_raw = name =~ /\.(raw|hbr)$/
       hbs_template = node.inner_html
 
       begin
@@ -135,7 +138,7 @@ class ThemeField < ActiveRecord::Base
         js_compiler.append_module(content, filename)
       when "hbs"
         js_compiler.append_ember_template(filename.sub("discourse/templates/", ""), content)
-      when "raw.hbs"
+      when "hbr", "raw.hbs"
         js_compiler.append_raw_template(filename.sub("discourse/templates/", ""), content)
       else
         raise ThemeJavascriptCompiler::CompileError.new(I18n.t("themes.compile_error.unrecognized_extension", extension: extension))

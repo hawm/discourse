@@ -23,19 +23,19 @@ module PrettyText
 
     erb_name = "#{filename}.js.es6.erb"
     return erb_name if File.file?("#{root}#{erb_name}")
+
+    erb_name = "#{filename}.js.erb"
+    return erb_name if File.file?("#{root}#{erb_name}")
   end
 
   def self.apply_es6_file(ctx, root_path, part_name)
     filename = find_file(root_path, part_name)
     if filename
       source = File.read("#{root_path}#{filename}")
+      source = ERB.new(source).result(binding) if filename =~ /\.erb$/
 
-      if filename =~ /\.erb$/
-        source = ERB.new(source).result(binding)
-      end
-
-      template = Tilt::ES6ModuleTranspilerTemplate.new {}
-      transpiled = template.module_transpile(source, "#{Rails.root}/app/assets/javascripts/", part_name)
+      transpiler = DiscourseJsProcessor::Transpiler.new
+      transpiled = transpiler.perform(source, "#{Rails.root}/app/assets/javascripts/", part_name)
       ctx.eval(transpiled)
     else
       # Look for vendored stuff
@@ -58,14 +58,14 @@ module PrettyText
       elsif l =~ /\/\/= require_tree (\.\/)?(.*)$/
         path = Regexp.last_match[2]
         Dir["#{root_path}/#{path}/**"].sort.each do |f|
-          apply_es6_file(ctx, root_path, f.sub(root_path, '')[1..-1].sub(/\.js.es6$/, ''))
+          apply_es6_file(ctx, root_path, f.sub(root_path, '')[1..-1].sub(/\.js(.es6)?$/, ''))
         end
       end
     end
   end
 
   def self.create_es6_context
-    ctx = MiniRacer::Context.new(timeout: 15000)
+    ctx = MiniRacer::Context.new(timeout: 25000)
 
     ctx.eval("window = {}; window.devicePixelRatio = 2;") # hack to make code think stuff is retina
 
@@ -97,7 +97,7 @@ module PrettyText
     to_load.uniq.each do |f|
       if f =~ /^.+assets\/javascripts\//
         root = Regexp.last_match[0]
-        apply_es6_file(ctx, root, f.sub(root, '').sub(/\.js\.es6$/, ''))
+        apply_es6_file(ctx, root, f.sub(root, '').sub(/\.js(\.es6)?$/, ''))
       end
     end
 
@@ -340,8 +340,8 @@ module PrettyText
     doc = Nokogiri::HTML.fragment(html)
     DiscourseEvent.trigger(:reduce_excerpt, doc, options)
     strip_image_wrapping(doc)
+    strip_oneboxed_media(doc)
     html = doc.to_html
-
     ExcerptParser.get_excerpt(html, max_length, options)
   end
 
@@ -372,6 +372,11 @@ module PrettyText
 
   def self.strip_image_wrapping(doc)
     doc.css(".lightbox-wrapper .meta").remove
+  end
+
+  def self.strip_oneboxed_media(doc)
+    doc.css("audio").remove
+    doc.css(".video-onebox,video").remove
   end
 
   def self.convert_vimeo_iframes(doc)
@@ -435,6 +440,7 @@ module PrettyText
 
   USER_TYPE ||= 'user'
   GROUP_TYPE ||= 'group'
+  GROUP_MENTIONABLE_TYPE ||= 'group-mentionable'
 
   def self.add_mentions(doc, user_id: nil)
     elements = doc.css("span.mention")
@@ -442,7 +448,7 @@ module PrettyText
 
     mentions = lookup_mentions(names, user_id: user_id)
 
-    doc.css("span.mention").each do |element|
+    elements.each do |element|
       name = element.text[1..-1]
       name.downcase!
 
@@ -456,6 +462,9 @@ module PrettyText
         case type
         when USER_TYPE
           element['href'] = "#{Discourse::base_uri}/u/#{name}"
+        when GROUP_MENTIONABLE_TYPE
+          element['class'] = 'mention-group notify'
+          element['href'] = "#{Discourse::base_uri}/groups/#{name}"
         when GROUP_TYPE
           element['class'] = 'mention-group'
           element['href'] = "#{Discourse::base_uri}/groups/#{name}"
@@ -481,8 +490,16 @@ module PrettyText
         :group_type AS type,
         lower(name) AS name
       FROM groups
-      WHERE lower(name) IN (:names) AND (#{Group.mentionable_sql_clause})
     )
+    UNION
+    (
+      SELECT
+        :group_mentionable_type AS type,
+        lower(name) AS name
+      FROM groups
+      WHERE lower(name) IN (:names) AND (#{Group.mentionable_sql_clause(include_public: false)})
+    )
+    ORDER BY type
     SQL
 
     user = User.find_by(id: user_id)
@@ -492,6 +509,7 @@ module PrettyText
       names: names,
       user_type: USER_TYPE,
       group_type: GROUP_TYPE,
+      group_mentionable_type: GROUP_MENTIONABLE_TYPE,
       levels: Group.alias_levels(user),
       user_id: user_id
     )

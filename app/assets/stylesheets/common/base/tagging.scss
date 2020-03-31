@@ -3,17 +3,17 @@
   margin-top: 3px;
 }
 
-.tag-list {
+.tags-list {
   margin-top: 2em;
   padding-bottom: 1em;
   border-bottom: 1px solid $primary-low;
 }
 
-#list-area .tag-list h3 {
+#list-area .tags-list h3 {
   margin-bottom: 20px;
 }
 
-.tag-list .tag-box {
+.tags-list .tag-box {
   display: inline-block;
   width: 300px;
   margin-bottom: 1em;
@@ -153,10 +153,12 @@ $tag-color: $primary-medium;
   display: inline-block;
 }
 
-.topic-list-item .discourse-tags {
-  display: inline-flex;
-  font-weight: normal;
-  font-size: $font-down-1;
+.topic-list-item {
+  .discourse-tags {
+    display: inline-flex;
+    font-weight: normal;
+    font-size: $font-down-1;
+  }
 }
 
 .categories-list .topic-list-latest .discourse-tags {
@@ -269,7 +271,7 @@ header .discourse-tag {
   }
 }
 
-.tag-info {
+section.tag-info {
   margin: 1em 0;
   padding: 2em;
   border: 1px solid $primary-low;

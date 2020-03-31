@@ -51,16 +51,23 @@ class Admin::BadgesController < Admin::AdminController
     batch = []
 
     File.open(csv_file) do |csv|
+      mode = Email.is_valid?(CSV.parse_line(csv.first).first) ? 'email' : 'username'
+      csv.rewind
+
       csv.each_line do |email_line|
-        batch.concat CSV.parse_line(email_line)
-        line_number += 1
+        line = CSV.parse_line(email_line).first
+
+        if line.present?
+          batch << line
+          line_number += 1
+        end
 
         # Split the emails in batches of 200 elements.
         full_batch = csv.lineno % (BadgeGranter::MAX_ITEMS_FOR_DELTA * batch_number) == 0
         last_batch_item = full_batch || csv.eof?
 
         if last_batch_item
-          Jobs.enqueue(:mass_award_badge, user_emails: batch, badge_id: badge.id)
+          Jobs.enqueue(:mass_award_badge, users_batch: batch, badge_id: badge.id, mode: mode)
           batch = []
           batch_number += 1
         end

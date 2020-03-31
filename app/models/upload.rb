@@ -14,6 +14,12 @@ class Upload < ActiveRecord::Base
   belongs_to :user
   belongs_to :access_control_post, class_name: 'Post'
 
+  # when we access this post we don't care if the post
+  # is deleted
+  def access_control_post
+    Post.unscoped { super }
+  end
+
   has_many :post_uploads, dependent: :destroy
   has_many :posts, through: :post_uploads
 
@@ -254,7 +260,6 @@ class Upload < ActiveRecord::Base
   end
 
   def update_secure_status(secure_override_value: nil)
-    return false if self.for_theme || self.for_site_setting
     mark_secure = secure_override_value.nil? ? UploadSecurity.new(self).should_be_secure? : secure_override_value
 
     secure_status_did_change = self.secure? != mark_secure

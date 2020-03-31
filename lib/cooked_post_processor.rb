@@ -56,7 +56,7 @@ class CookedPostProcessor
   end
 
   def grant_badges
-    return unless Guardian.new.can_see?(@post)
+    return if @post.user.blank? || !Guardian.new.can_see?(@post)
 
     BadgeGranter.grant(Badge.find(Badge::FirstEmoji), @post.user, post_id: @post.id) if has_emoji?
     BadgeGranter.grant(Badge.find(Badge::FirstOnebox), @post.user, post_id: @post.id) if @has_oneboxes
@@ -216,7 +216,9 @@ class CookedPostProcessor
     # minus emojis
     @doc.css("img.emoji") -
     # minus images inside quotes
-    @doc.css(".quote img")
+    @doc.css(".quote img") -
+    # minus onebox site icons
+    @doc.css("img.site-icon")
   end
 
   def oneboxed_images
@@ -266,6 +268,7 @@ class CookedPostProcessor
         return [size["width"], size["height"]]
       end
     end
+    nil
   end
 
   def add_to_size_cache(url, w, h)
@@ -306,29 +309,34 @@ class CookedPostProcessor
   end
 
   def convert_to_link!(img)
+    w, h = img["width"].to_i, img["height"].to_i
+    user_width, user_height = (w > 0 && h > 0 && [w, h]) ||
+                              get_size_from_attributes(img) ||
+                              get_size_from_image_sizes(img["src"], @opts[:image_sizes])
+
+    limit_size!(img)
+
     src = img["src"]
     return if src.blank? || is_a_hyperlink?(img) || is_svg?(img)
 
-    width, height = img["width"].to_i, img["height"].to_i
-    # TODO: store original dimentions in db
     original_width, original_height = (get_size(src) || [0, 0]).map(&:to_i)
-
-    # can't reach the image...
     if original_width == 0 || original_height == 0
       Rails.logger.info "Can't reach '#{src}' to get its dimension."
       return
     end
 
-    return if original_width <= width && original_height <= height
     return if original_width <= SiteSetting.max_image_width && original_height <= SiteSetting.max_image_height
 
-    crop   = SiteSetting.min_ratio_to_crop > 0
-    crop &&= original_width.to_f / original_height.to_f < SiteSetting.min_ratio_to_crop
+    user_width, user_height = [original_width, original_height] if user_width.to_i <= 0 && user_height.to_i <= 0
+    width, height = user_width, user_height
+
+    crop = SiteSetting.min_ratio_to_crop > 0 && width.to_f / height.to_f < SiteSetting.min_ratio_to_crop
 
     if crop
-      width, height = ImageSizer.crop(original_width, original_height)
-      img["width"] = width
-      img["height"] = height
+      width, height = ImageSizer.crop(width, height)
+      img["width"], img["height"] = width, height
+    else
+      width, height = ImageSizer.resize(width, height)
     end
 
     # if the upload already exists and is attached to a different post,
@@ -488,7 +496,11 @@ class CookedPostProcessor
 
   def update_post_image
     img = extract_images_for_post.first
-    return if img.blank?
+    if img.blank?
+      @post.update_column(:image_url, nil) if @post.image_url
+      @post.topic.update_column(:image_url, nil) if @post.topic.image_url && @post.is_first_post?
+      return
+    end
 
     if img["src"].present?
       @post.update_column(:image_url, img["src"][0...255]) # post
@@ -679,7 +691,7 @@ class CookedPostProcessor
   end
 
   def available_disk_space
-    100 - `df -P #{Rails.root}/public/uploads | tail -1 | tr -s ' ' | cut -d ' ' -f 5`.to_i
+    100 - DiskSpace.percent_free("#{Rails.root}/public/uploads")
   end
 
   def dirty?
@@ -694,17 +706,16 @@ class CookedPostProcessor
 
   def post_process_images
     extract_images.each do |img|
-      unless add_image_placeholder!(img)
-        limit_size!(img)
-        convert_to_link!(img)
-      end
+      convert_to_link!(img) unless add_image_placeholder!(img)
     end
   end
 
   def process_inline_onebox(element)
     inline_onebox = InlineOneboxer.lookup(
       element.attributes["href"].value,
-      invalidate: !!@opts[:invalidate_oneboxes]
+      invalidate: !!@opts[:invalidate_oneboxes],
+      user_id: @post&.user_id,
+      category_id: @post&.topic&.category_id
     )
 
     if title = inline_onebox&.dig(:title)

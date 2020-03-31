@@ -65,6 +65,11 @@ describe User do
         expect(user.errors.full_messages.first)
           .to include(user_error_message(:name, :same_as_password))
       end
+
+      it "doesn't raise an error if the name is longer than the max password length" do
+        user.name = 'x' * (User.max_password_length + 1)
+        expect(user).to be_valid
+      end
     end
 
     describe 'emails' do
@@ -858,7 +863,6 @@ describe User do
   end
 
   describe "previous_visit_at" do
-
     let(:user) { Fabricate(:user) }
     let!(:first_visit_date) { Time.zone.now }
     let!(:second_visit_date) { 2.hours.from_now }
@@ -884,36 +888,36 @@ describe User do
       # second visit
       user.update_last_seen!(second_visit_date)
       user.reload
-      expect(user.previous_visit_at).to be_within_one_second_of(first_visit_date)
+      expect(user.previous_visit_at).to eq_time(first_visit_date)
 
       # third visit
       user.update_last_seen!(third_visit_date)
       user.reload
-      expect(user.previous_visit_at).to be_within_one_second_of(second_visit_date)
+      expect(user.previous_visit_at).to eq_time(second_visit_date)
     end
 
   end
 
   describe "update_last_seen!" do
-    let (:user) { Fabricate(:user) }
+    let(:user) { Fabricate(:user) }
     let!(:first_visit_date) { Time.zone.now }
     let!(:second_visit_date) { 2.hours.from_now }
 
     it "should update the last seen value" do
       expect(user.last_seen_at).to eq nil
       user.update_last_seen!(first_visit_date)
-      expect(user.reload.last_seen_at).to be_within_one_second_of(first_visit_date)
+      expect(user.reload.last_seen_at).to eq_time(first_visit_date)
     end
 
     it "should update the first seen value if it doesn't exist" do
       user.update_last_seen!(first_visit_date)
-      expect(user.reload.first_seen_at).to be_within_one_second_of(first_visit_date)
+      expect(user.reload.first_seen_at).to eq_time(first_visit_date)
     end
 
     it "should not update the first seen value if it doesn't exist" do
       user.update_last_seen!(first_visit_date)
       user.update_last_seen!(second_visit_date)
-      expect(user.reload.first_seen_at).to be_within_one_second_of(first_visit_date)
+      expect(user.reload.first_seen_at).to eq_time(first_visit_date)
     end
   end
 
@@ -971,58 +975,51 @@ describe User do
     end
 
     describe 'with no previous values' do
-      let!(:date) { Time.zone.now }
-
-      before do
-        freeze_time date
-        user.update_last_seen!
-      end
-
       after do
         Discourse.redis.flushall
       end
 
       it "updates last_seen_at" do
-        expect(user.last_seen_at).to be_within_one_second_of(date)
+        date = freeze_time
+        user.update_last_seen!
+
+        expect(user.last_seen_at).to eq_time(date)
       end
 
       it "should have 0 for days_visited" do
+        user.update_last_seen!
         user.reload
+
         expect(user.user_stat.days_visited).to eq(1)
       end
 
       it "should log a user_visit with the date" do
-        expect(user.user_visits.first.visited_at).to eq(date.to_date)
+        date = freeze_time
+        user.update_last_seen!
+
+        expect(user.user_visits.first.visited_at).to eq_time(date.to_date)
       end
 
       context "called twice" do
-
-        before do
-          freeze_time date
+        it "doesn't increase days_visited twice" do
+          freeze_time
           user.update_last_seen!
           user.update_last_seen!
           user.reload
-        end
 
-        it "doesn't increase days_visited twice" do
           expect(user.user_stat.days_visited).to eq(1)
         end
-
       end
 
       describe "after 3 days" do
-        let!(:future_date) { 3.days.from_now }
-
-        before do
-          freeze_time future_date
-          user.update_last_seen!
-        end
-
         it "should log a second visited_at record when we log an update later" do
+          user.update_last_seen!
+          future_date = freeze_time(3.days.from_now)
+          user.update_last_seen!
+
           expect(user.user_visits.count).to eq(2)
         end
       end
-
     end
   end
 
@@ -1249,6 +1246,16 @@ describe User do
       expect(User.gravatar_template("em@il.com")).to eq("//www.gravatar.com/avatar/6dc2fde946483a1d8a84b89345a1b638.png?s={size}&r=pg&d=identicon")
     end
 
+  end
+
+  describe "#custom_gravatar" do
+    before do
+      SiteSetting.gravatar_base_url = "seccdn.libravatar.org"
+    end
+
+    it "returns a gravatar url as set in the settings" do
+      expect(User.gravatar_template("em@il.com")).to eq("//seccdn.libravatar.org/avatar/6dc2fde946483a1d8a84b89345a1b638.png?s={size}&r=pg&d=identicon")
+    end
   end
 
   describe "#letter_avatar_color" do
@@ -1515,48 +1522,65 @@ describe User do
     end
   end
 
-  describe "number_of_flags_given" do
-
+  describe 'staff info' do
     fab!(:user) { Fabricate(:user) }
-    fab!(:moderator) { Fabricate(:moderator) }
 
-    it "doesn't count disagreed flags" do
-      post_agreed = Fabricate(:post)
-      PostActionCreator.inappropriate(user, post_agreed).reviewable.perform(moderator, :agree_and_keep)
+    describe "#number_of_flags_given" do
+      fab!(:moderator) { Fabricate(:moderator) }
 
-      post_deferred = Fabricate(:post)
-      PostActionCreator.inappropriate(user, post_deferred).reviewable.perform(moderator, :ignore)
+      it "doesn't count disagreed flags" do
+        post_agreed = Fabricate(:post)
+        PostActionCreator.inappropriate(user, post_agreed).reviewable.perform(moderator, :agree_and_keep)
 
-      post_disagreed = Fabricate(:post)
-      PostActionCreator.inappropriate(user, post_disagreed).reviewable.perform(moderator, :disagree)
+        post_deferred = Fabricate(:post)
+        PostActionCreator.inappropriate(user, post_deferred).reviewable.perform(moderator, :ignore)
 
-      expect(user.number_of_flags_given).to eq(2)
+        post_disagreed = Fabricate(:post)
+        PostActionCreator.inappropriate(user, post_disagreed).reviewable.perform(moderator, :disagree)
+
+        expect(user.number_of_flags_given).to eq(2)
+      end
     end
 
-  end
+    describe "number_of_deleted_posts" do
+      fab!(:moderator) { Fabricate(:moderator) }
 
-  describe "number_of_deleted_posts" do
+      it "counts all the posts" do
+        # at least 1 "unchanged" post
+        Fabricate(:post, user: user)
 
-    fab!(:user) { Fabricate(:user, id: 2) }
-    fab!(:moderator) { Fabricate(:moderator) }
+        post_deleted_by_moderator = Fabricate(:post, user: user)
+        PostDestroyer.new(moderator, post_deleted_by_moderator).destroy
 
-    it "counts all the posts" do
-      # at least 1 "unchanged" post
-      Fabricate(:post, user: user)
+        post_deleted_by_user = Fabricate(:post, user: user, post_number: 2)
+        PostDestroyer.new(user, post_deleted_by_user).destroy
 
-      post_deleted_by_moderator = Fabricate(:post, user: user)
-      PostDestroyer.new(moderator, post_deleted_by_moderator).destroy
+        # fake stub deletion
+        post_deleted_by_user.update_columns(updated_at: 2.days.ago)
+        PostDestroyer.destroy_stubs
 
-      post_deleted_by_user = Fabricate(:post, user: user, post_number: 2)
-      PostDestroyer.new(user, post_deleted_by_user).destroy
-
-      # fake stub deletion
-      post_deleted_by_user.update_columns(updated_at: 2.days.ago)
-      PostDestroyer.destroy_stubs
-
-      expect(user.number_of_deleted_posts).to eq(2)
+        expect(user.number_of_deleted_posts).to eq(2)
+      end
     end
 
+    describe '#number_of_rejected_posts' do
+      it 'counts rejected posts' do
+        post = Fabricate(:post, user: user)
+
+        Fabricate(:reviewable_queued_post, target: post, status: Reviewable.statuses[:rejected])
+
+        expect(user.number_of_rejected_posts).to eq(1)
+      end
+
+      it 'ignore non-rejected posts' do
+        post = Fabricate(:post, user: user)
+
+        Fabricate(:reviewable_queued_post, target: post, status: Reviewable.statuses[:approved])
+
+        expect(user.number_of_rejected_posts).to eq(0)
+
+      end
+    end
   end
 
   describe "new_user?" do
@@ -1816,44 +1840,29 @@ describe User do
     end
   end
 
-  describe "#unstage" do
-    let!(:staged_user) { Fabricate(:staged, email: 'staged@account.com', active: true, username: 'staged1', name: 'Stage Name') }
-    let(:params) { { email: 'staged@account.com', active: true, username: 'unstaged1', name: 'Foo Bar' } }
+  describe "#unstage!" do
+    let!(:user) { Fabricate(:staged, email: 'staged@account.com', active: true, username: 'staged1', name: 'Stage Name') }
 
     it "correctly unstages a user" do
-      user = User.unstage(params)
-
-      expect(user.id).to eq(staged_user.id)
-      expect(user.username).to eq('unstaged1')
-      expect(user.name).to eq('Foo Bar')
-      expect(user.active).to eq(false)
-      expect(user.email).to eq('staged@account.com')
+      user.unstage!
       expect(user.staged).to eq(false)
     end
 
-    it "returns nil when the user cannot be unstaged" do
-      Fabricate(:coding_horror)
-      expect(User.unstage(email: 'jeff@somewhere.com')).to be_nil
-      expect(User.unstage(email: 'no@account.com')).to be_nil
-    end
-
     it "removes all previous notifications during unstaging" do
-      Fabricate(:notification, user: staged_user)
-      Fabricate(:private_message_notification, user: staged_user)
-      staged_user.reload
+      Fabricate(:notification, user: user)
+      Fabricate(:private_message_notification, user: user)
+      expect(user.total_unread_notifications).to eq(2)
 
-      expect(staged_user.total_unread_notifications).to eq(2)
-      user = User.unstage(params)
+      user.unstage!
+      user.reload
       expect(user.total_unread_notifications).to eq(0)
       expect(user.staged).to eq(false)
     end
 
     it "triggers an event" do
-      unstaged_user = nil
-      event = DiscourseEvent.track_events { unstaged_user = User.unstage(params) }.first
-
+      event = DiscourseEvent.track_events { user.unstage! }.first
       expect(event[:event_name]).to eq(:user_unstaged)
-      expect(event[:params].first).to eq(unstaged_user)
+      expect(event[:params].first).to eq(user)
     end
   end
 
@@ -2270,6 +2279,34 @@ describe User do
       user.grant_admin!
 
       expect(user.approved).to eq(true)
+    end
+  end
+
+  describe "#recent_time_read" do
+    fab!(:user) { Fabricate(:user) }
+    fab!(:user2) { Fabricate(:user) }
+
+    before_all do
+      UserVisit.create(user_id: user.id, visited_at: 1.minute.ago, posts_read: 1, mobile: false, time_read: 10)
+      UserVisit.create(user_id: user.id, visited_at: 2.days.ago, posts_read: 1, mobile: false, time_read: 20)
+      UserVisit.create(user_id: user.id, visited_at: 1.week.ago, posts_read: 1, mobile: false, time_read: 30)
+      UserVisit.create(user_id: user.id, visited_at: 1.year.ago, posts_read: 1, mobile: false, time_read: 40) # Old, should be ignored
+      UserVisit.create(user_id: user2.id, visited_at: 1.minute.ago, posts_read: 1, mobile: false, time_read: 50)
+    end
+
+    it "calculates correctly" do
+      expect(user.recent_time_read).to eq(60)
+      expect(user2.recent_time_read).to eq(50)
+    end
+
+    it "preloads correctly" do
+      User.preload_recent_time_read([user, user2])
+
+      expect(user.instance_variable_get(:@recent_time_read)).to eq(60)
+      expect(user2.instance_variable_get(:@recent_time_read)).to eq(50)
+
+      expect(user.recent_time_read).to eq(60)
+      expect(user2.recent_time_read).to eq(50)
     end
   end
 end

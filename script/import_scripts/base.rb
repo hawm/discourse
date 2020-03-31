@@ -81,7 +81,11 @@ class ImportScripts::Base
       disable_emails: 'yes',
       max_attachment_size_kb: 102400,
       max_image_size_kb: 102400,
-      authorized_extensions: '*'
+      authorized_extensions: '*',
+      clean_up_inactive_users_after_days: 0,
+      clean_up_unused_staged_users_after_days: 0,
+      clean_up_uploads: false,
+      clean_orphan_uploads_grace_period_hours: 1800
     }
   end
 
@@ -125,14 +129,21 @@ class ImportScripts::Base
     raise NotImplementedError
   end
 
-  %i{ post_id_from_imported_post_id
-      topic_lookup_from_imported_post_id
-      group_id_from_imported_group_id
-      find_group_by_import_id
-      user_id_from_imported_user_id
-      find_user_by_import_id
-      category_id_from_imported_category_id
-      add_group add_user add_category add_topic add_post
+  %i{
+    add_category
+    add_group
+    add_post
+    add_topic
+    add_user
+    category_id_from_imported_category_id
+    find_group_by_import_id
+    find_user_by_import_id
+    group_id_from_imported_group_id
+    post_already_imported?
+    post_id_from_imported_post_id
+    topic_lookup_from_imported_post_id
+    user_already_imported?
+    user_id_from_imported_user_id
   }.each do |method_name|
     delegate method_name, to: :@lookup
   end
@@ -208,24 +219,28 @@ class ImportScripts::Base
   def all_records_exist?(type, import_ids)
     return false if import_ids.empty?
 
-    connection = ActiveRecord::Base.connection.raw_connection
-    connection.exec('CREATE TEMP TABLE import_ids(val text PRIMARY KEY)')
+    ActiveRecord::Base.transaction do
+      begin
+        connection = ActiveRecord::Base.connection.raw_connection
+        connection.exec('CREATE TEMP TABLE import_ids(val text PRIMARY KEY)')
 
-    import_id_clause = import_ids.map { |id| "('#{PG::Connection.escape_string(id.to_s)}')" }.join(",")
+        import_id_clause = import_ids.map { |id| "('#{PG::Connection.escape_string(id.to_s)}')" }.join(",")
 
-    connection.exec("INSERT INTO import_ids VALUES #{import_id_clause}")
+        connection.exec("INSERT INTO import_ids VALUES #{import_id_clause}")
 
-    existing = "#{type.to_s.classify}CustomField".constantize
-    existing = existing.where(name: 'import_id')
-      .joins('JOIN import_ids ON val = value')
-      .count
+        existing = "#{type.to_s.classify}CustomField".constantize
+        existing = existing.where(name: 'import_id')
+          .joins('JOIN import_ids ON val = value')
+          .count
 
-    if existing == import_ids.length
-      puts "Skipping #{import_ids.length} already imported #{type}"
-      true
+        if existing == import_ids.length
+          puts "Skipping #{import_ids.length} already imported #{type}"
+          true
+        end
+      ensure
+        connection.exec('DROP TABLE import_ids') unless connection.nil?
+      end
     end
-  ensure
-    connection.exec('DROP TABLE import_ids') unless connection.nil?
   end
 
   def created_user(user)
@@ -358,8 +373,6 @@ class ImportScripts::Base
     if u.custom_fields['import_email']
       u.suspended_at = Time.zone.at(Time.now)
       u.suspended_till = 200.years.from_now
-      ban_reason = 'Invalid email address on import'
-      u.active = false
       u.save!
 
       user_option = u.user_option
@@ -368,7 +381,7 @@ class ImportScripts::Base
       user_option.email_messages_level = UserOption.email_level_types[:never]
       user_option.save!
       if u.save
-        StaffActionLogger.new(Discourse.system_user).log_user_suspend(u, ban_reason)
+        StaffActionLogger.new(Discourse.system_user).log_user_suspend(u, 'Invalid email address on import')
       else
         Rails.logger.error("Failed to suspend user #{u.username}. #{u.errors.try(:full_messages).try(:inspect)}")
       end
@@ -432,8 +445,13 @@ class ImportScripts::Base
   end
 
   def create_category(opts, import_id)
-    existing = Category.where("LOWER(name) = ?", opts[:name].downcase).first
-    return existing if existing && existing.parent_category.try(:id) == opts[:parent_category_id]
+    existing =
+      Category
+        .where(parent_category_id: opts[:parent_category_id])
+        .where("LOWER(name) = ?", opts[:name].downcase.strip)
+        .first
+
+    return existing if existing
 
     post_create_action = opts.delete(:post_create_action)
 

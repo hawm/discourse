@@ -3,34 +3,42 @@
     <div class="options">
       <div class="input-group poll-select">
         <label class="input-group-label">{{i18n 'poll.ui_builder.poll_type.label'}}</label>
-        {{combo-box content=pollTypes
-                    value=pollType
-                    allowInitialValueMutation=true
-                    valueAttribute="value"}}
+        {{combo-box
+          content=pollTypes
+          value=pollType
+          valueProperty="value"
+          class="poll-type"
+          onChange=(action (mut pollType))
+        }}
       </div>
 
       <div class="input-group poll-select">
         <label class="input-group-label">{{i18n 'poll.ui_builder.poll_result.label'}}</label>
-        {{combo-box content=pollResults
-                    value=pollResult
-                    allowInitialValueMutation=true
-                    valueAttribute="value"}}
+        {{combo-box
+          content=pollResults
+          value=pollResult
+          class="poll-result"
+          valueProperty="value"
+        }}
       </div>
 
       <div class="input-group poll-select">
         <label class="input-group-label">{{i18n 'poll.ui_builder.poll_groups.label'}}</label>
         {{combo-box content=siteGroups
                     value=pollGroups
-                    allowInitialValueMutation=true
+                    options=(hash clearable=true)
                     valueAttribute="value"}}
       </div>
 
       {{#unless isNumber}}
         <div class="input-group poll-select">
           <label class="input-group-label">{{i18n 'poll.ui_builder.poll_chart_type.label'}}</label>
-          {{combo-box content=pollChartTypes
-                      value=chartType
-                      valueAttribute="value"}}
+          {{combo-box
+            class="poll-chart-type"
+            content=pollChartTypes
+            value=chartType
+            valueAttribute="value"
+          }}
         </div>
       {{/unless}}
 
@@ -39,7 +47,7 @@
           <label class="input-group-label">{{i18n 'poll.ui_builder.poll_config.min'}}</label>
           {{input type='number'
                   value=pollMin
-                  valueAttribute="value"
+                  valueProperty="value"
                   class="poll-options-min"}}
         </div>
         {{input-tip validation=minMaxValueValidation}}
@@ -48,7 +56,7 @@
           <label class="input-group-label">{{i18n 'poll.ui_builder.poll_config.max'}}</label>
           {{input type='number'
                   value=pollMax
-                  valueAttribute="value"
+                  valueProperty="value"
                   class="poll-options-max"}}
         </div>
 
@@ -57,7 +65,7 @@
             <label class="input-group-label">{{i18n 'poll.ui_builder.poll_config.step'}}</label>
             {{input type='number'
                     value=pollStep
-                    valueAttribute="value"
+                    valueProperty="value"
                     min="1"
                     class="poll-options-step"}}
           </div>
@@ -93,6 +101,9 @@
         <div class="input-group poll-date">
           {{date-picker-future value=date containerId="date-container"}}
           {{input type="time" value=time}}
+        </div>
+
+        <div class="input-group poll-date">
           <div id="date-container"></div>
         </div>
       {{/if}}

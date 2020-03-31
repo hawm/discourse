@@ -8,7 +8,7 @@ _The pricing information is included as a courtesy, and may be out of date. Disc
 
 **Please note that in any email provider, you _must_ verify and use the subdomain, e.g. `discourse.example.com`. If you verify the domain only, e.g. `example.com`, mail will not be configured correctly.**
 
-Enter these values when prompted by `./discourse-setup` per the [install guide](https://github.com/discourse/discourse/blob/master/docs/INSTALL-cloud.md#edit-discourse-configuration):
+Enter these values when prompted by `./discourse-setup` per the [install guide](https://github.com/discourse/discourse/blob/master/docs/INSTALL-cloud.md#edit-discourse-configuration). To change the current email service, run `./discourse-setup` as well (this will bring the forum offline for a few minutes while it gets rebuilt).
 
 #### [Mailgun][gun] &mdash; 5k emails/month on a 3 month trial
 
@@ -35,7 +35,7 @@ Go to [My Account page](https://app.mailjet.com/account) and click on the ["SMTP
     SMTP password?       [Elastic Email API Key]
     SMTP port?           2525
     
-NOTE: Elastic Email policy insists on an additional UNSUBSCRIBE link at the bottom of each sent email. If this is a problem for your needs, consider using other providers. [See discussion here](https://meta.discourse.org/t/remove-or-merge-elastic-email-unsubscribe/70236).
+NOTE: By default, Elastic Email will add an additional UNSUBSCRIBE link at the bottom of each sent email. You need to work with them to [disable that link](https://meta.discourse.org/t/remove-or-merge-elastic-email-unsubscribe/70236/39), so that Discourse users can manage their subscription through Discourse.
 
    [ee]: https://elasticemail.com
   [jet]: https://www.mailjet.com/pricing

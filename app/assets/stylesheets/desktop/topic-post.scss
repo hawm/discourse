@@ -613,6 +613,9 @@ blockquote {
   .cooked {
     padding: 0 $topic-body-width-padding 0.25em $topic-body-width-padding;
   }
+  .group-request {
+    padding: 0.5em $topic-body-width-padding 0 $topic-body-width-padding;
+  }
   a.expand-hidden {
     padding-left: $topic-body-width-padding;
   }
@@ -847,7 +850,7 @@ span.highlighted {
 
 /* Tablet (portrait) ----------- */
 
-@media all and (max-width: 775px) {
+@media all and (max-width: 790px) {
   .topic-avatar {
     width: 45px;
   }

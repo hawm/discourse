@@ -63,11 +63,9 @@
             <td>
               {{#if canManageGroup}}
                 {{group-member-dropdown
-                    removeMember=(action "removeMember")
-                    makeOwner=(action "makeOwner")
-                    removeOwner=(action "removeOwner")
-                    member=m
-                    group=model}}
+                  member=m
+                  onChange=(action "actOnGroup" m)
+                }}
               {{/if}}
               {{!-- group parameter is used by plugins --}}
             </td>

@@ -385,6 +385,7 @@ pt_BR:
       deleted_post: "(postagem excluída)"
       deleted_user: "(usuário excluído)"
       user:
+        bio: "Bio"
         username: "Nome de Usuário"
         email: "E-mail"
         name: "Nome"
@@ -576,7 +577,6 @@ pt_BR:
       leave: "Sair"
       request: "Solicitar"
       message: "Mensagem"
-      allow_membership_requests: "Permitir que usuários solicitem para entrar no grupo a proprietários do grupo"
       membership_request_template: "Modelo personalizado para exibir aos usuários ao enviar uma solicitação de associação"
       membership_request:
         submit: "Enviar Solicitação"
@@ -1257,9 +1257,6 @@ pt_BR:
       enabled: "Este site está em modo de somente leitura. Por favor, continue a navegar, mas respostas, curtidas e outras ações estão desabilitadas por enquanto."
       login_disabled: "O login é desabilitado enquanto o site está em modo de somente leitura."
       logout_disabled: "O logout é desabilitado enquanto o site está em modo de somente leitura."
-    too_few_topics_and_posts_notice: "Vamos <a href='https://blog.discourse.org/2014/08/building-a-discourse-community/'>iniciar a discussão!</a> Há <strong>%{currentTopics}</strong> tópicos e <strong>%{currentPosts}</strong> postagens. Os visitantes precisam de mais informações para ler e responder - nós recomendamos pelo menos <strong>%{requiredTopics}</strong> tópicos e <strong>%{requiredPosts}</strong> posts. Somente funcionários podem ver esta mensagem."
-    too_few_topics_notice: "Vamos <a href='https://blog.discourse.org/2014/08/building-a-discourse-community/'>iniciar a discussão!</a> Há <strong>%{currentTopics}</strong> tópicos. Os visitantes precisam de mais informações para ler e responder - nós recomendamos pelo menos <strong>%{requiredTopics}</strong> tópicos. Somente funcionários podem ver esta mensagem."
-    too_few_posts_notice: "Vamos <a href='https://blog.discourse.org/2014/08/building-a-discourse-community/'>inicar a discussão!</a> Há <strong>%{currentPosts}</strong> postagens. Os visitantes precisam de mais informações para ler e responder - nós recomendamos pelo menos <strong>%{requiredPosts}</strong> postagens. Somente funcionários podem ver esta mensagem."
     logs_error_rate_notice:
       reached_hour_MF: "<b>{relativeAge}</b> – <a href='{url}' target='_blank'>{rate, plural, one {# erro/hora} other {# erros/hora}}</a> alcançou o limite de configuração do site de {limit, plural, one {# erro/hora} other {# erros/hora}}."
       reached_minute_MF: "<b>{relativeAge}</b> – <a href='{url}' target='_blank'>{rate, plural, one {# erro/minuto} other {# erros/minuto}}</a> alcançou o limite de configuração do site de {limit, plural, one {# erro/minuto} other {# erros/minuto}}."
@@ -1330,8 +1327,6 @@ pt_BR:
       reset: "Redefinir Senha"
       complete_username: "Se uma conta corresponder ao nome de usuário <b>%{username}</b>, você deverá receber um e-mail com instruções de como redefinir sua senha rapidamente."
       complete_email: "Se uma conta corresponder à <b>%{email}</b>, você deverá receber um e-mail com instruções de como redefinir sua senha rapidamente."
-      complete_username_found: "Encontramos uma conta que corresponde ao nome de usuário <b>%{username}</b>, você deverá receber um e-mail com instruções de como redefinir sua senha em breve."
-      complete_email_found: "Encontramos uma conta que corresponde à <b>%{email}</b>, você deverá receber um e-mail com instruções de como redefinir sua senha em breve."
       complete_username_not_found: "Nenhuma conta corresponde ao nome de usuário <b>%{username}</b>"
       complete_email_not_found: "Nenhuma conta corresponde à <b>%{email}</b>"
       help: "E-mail não está chegando? Certifique-se de verificar sua pasta de spam primeiro.<p>Não tem certeza de qual endereço de e-mail você usou? Digite um endereço de e-mail e informaremos se ele existe aqui.</p><p>Se você não tiver mais acesso ao endereço de e-mail da sua conta, entre em contato com <a href='%{basePath}/about'>nossa prestativa staff.</a></p>"
@@ -1553,7 +1548,6 @@ pt_BR:
       view_new_post: "Veja a sua nova postagem."
       saving: "Salvando"
       saved: "Salvo!"
-      saved_draft: "Rascunho da postagem em progresso. Selecione para resumir."
       uploading: "Enviando..."
       show_preview: "mostrar pré-visualização &raquo;"
       hide_preview: "&laquo; ocultar pré-visualização"
@@ -2616,6 +2610,7 @@ pt_BR:
         help: "Este tópico não está listado; ele não será exibido em listas de tópicos e só pode ser acessado por meio de um link direto"
       personal_message:
         title: "Este tópico é uma mensagem pessoal"
+        help: "Este tópico é uma mensagem pessoal"
     posts: "Postagens"
     posts_long: "há {{number}} mensagens neste tópico"
     posts_likes_MF: |
@@ -2829,15 +2824,6 @@ pt_BR:
           name: Outros
         posting:
           name: Publicando
-    google_search: |
-      <h3>Procurar com o Google</h3>
-      <p>
-      <form action='//google.com/search' id='google-search' onsubmit="document.getElementById('google-query').value = 'site:' + window.location.host + ' ' + document.getElementById('user-query').value; return true;">
-      <input type="text" id='user-query' value="">
-      <input type='hidden' id='google-query' name="q">
-      <button class="btn btn-primary">Google</button>
-      </form>
-      </p>
     tagging:
       all_tags: "Todas as Etiquetas"
       other_tags: "Outras etiquetas"

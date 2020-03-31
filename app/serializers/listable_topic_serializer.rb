@@ -9,6 +9,7 @@ class ListableTopicSerializer < BasicTopicSerializer
              :last_posted_at,
              :bumped,
              :bumped_at,
+             :archetype,
              :unseen,
              :last_read_post_number,
              :unread,
@@ -110,7 +111,7 @@ class ListableTopicSerializer < BasicTopicSerializer
   alias :include_new_posts? :has_user_data
 
   def include_excerpt?
-    pinned || SiteSetting.always_include_topic_excerpts
+    pinned || SiteSetting.always_include_topic_excerpts || ThemeModifierHelper.new(request: scope.request).serialize_topic_excerpts
   end
 
   def pinned

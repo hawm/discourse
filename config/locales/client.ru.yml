@@ -197,6 +197,7 @@ ru:
       banner:
         enabled: "Создал баннер %{when}. Он будет отображаться вверху каждой страницы пока пользователь не закроет его."
         disabled: "Удалил баннер %{when}. Он больше не будет отображаться в верхней части каждой страницы."
+      forwarded: "переадресовал вышеуказанное письмо"
     topic_admin_menu: "действия по теме"
     wizard_required: "Добро пожаловать в ваш новый Discourse! Начните с <a href='%{url}' data-auto-route='true'>мастера настройки</a> ✨"
     emails_are_disabled: "Все исходящие письма были глобально отключены администратором. Уведомления любого вида не будут отправляться на почту."
@@ -425,7 +426,7 @@ ru:
           title: "Обзорные приоритеты"
       moderation_history: "История модерации"
       view_all: "Посмотреть все"
-      grouped_by_topic: "Сгруппированы по темам"
+      grouped_by_topic: "Сгруппированные по темам"
       none: "Нет элементов для премодерации."
       view_pending: "просмотр в ожидании"
       topic_has_pending:
@@ -441,6 +442,8 @@ ru:
       deleted_post: "(сообщение удалено)"
       deleted_user: "(пользователь удален)"
       user:
+        bio: "О себе"
+        website: "Вебсайт"
         username: "Псевдоним"
         email: "Email"
         name: "Имя"
@@ -1358,9 +1361,12 @@ ru:
       enabled: "Сайт работает в режиме \"только для чтения\". Сейчас вы можете продолжать просматривать сайт, но другие действия будут недоступны. "
       login_disabled: "Вход отключён, пока сайт в режиме «только для чтения»"
       logout_disabled: "Выход отключён, пока сайт в режиме «только для чтения»"
-    too_few_topics_and_posts_notice: "Давайте <a href='https://blog.discourse.org/2014/08/building-a-discourse-community/'>приступим к обсуждению!</a> Есть <strong>%{currentTopics}</strong> тем и <strong>%{currentPosts}</strong> постов. Пользователи должны больше читать и отвечать – мы рекомендуем, по крайней мере <strong>%{requiredTopics}</strong> тем и <strong>%{requiredPosts}</strong> постов. Только сотрудники могут видеть это сообщение."
-    too_few_topics_notice: "Давайте <a href='https://blog.discourse.org/2014/08/building-a-discourse-community/'>приступим к обсуждению!</a> Есть <strong>%{currentTopics}</strong> тем. Пользователи должны больше читать и отвечать – мы рекомендуем, по крайней мере <strong>%{requiredTopics}</strong> тем. Только сотрудники могут видеть это сообщение."
-    too_few_posts_notice: "Давайте <a href='https://blog.discourse.org/2014/08/building-a-discourse-community/'>приступим к обсуждению!</a> Есть <strong>%{currentPosts}</strong> сообщений. Пользователям нужно больше читать и отвечать - мы рекомендуем хотя бы <strong>%{requiredPosts}</strong> сообщений. Только сотрудники могут видеть это сообщение."
+    too_few_topics_and_posts_notice_MF: >-
+      Давайте <a href="https://blog.discourse.org/2014/08/building-a-discourse-community/">приступим к обсуждению!</a> Есть {currentTopics, plural, one {<strong>#</strong> тема} few {<strong>#</strong> темы} other {<strong>#</strong> тем}} и {currentPosts, plural, one {<strong>#</strong> сообщение} few {<strong>#</strong> сообщения} other {<strong>#</strong> сообщений}}. Пользователи должны больше читать и отвечать – мы рекомендуем, по крайней мере {requiredTopics, plural, one {<strong>#</strong> тему} few {<strong>#</strong> темы} other {<strong>#</strong> тем}} и {requiredPosts, plural, one {<strong>#</strong> сообщение} few {<strong>#</strong> сообщения} other {<strong>#</strong> сообщений}}. Только сотрудники могут видеть это сообщение.
+    too_few_topics_notice_MF: >-
+      Давайте <a href="https://blog.discourse.org/2014/08/building-a-discourse-community/">приступим к обсуждению!</a> Есть {currentTopics, plural, one {<strong>#</strong> тема} few {<strong>#</strong> темы} other {<strong>#</strong> тем}}. Пользователи должны больше читать и отвечать – мы рекомендуем, по крайней мере {requiredTopics, plural, one {<strong>#</strong> тему} few {<strong>#</strong> темы} other {<strong>#</strong> тем}}. Только сотрудники могут видеть это сообщение.
+    too_few_posts_notice_MF: >-
+      Давайте <a href="https://blog.discourse.org/2014/08/building-a-discourse-community/">приступим к обсуждению!</a> Есть {currentPosts, plural, one {<strong>#</strong> сообщение} few {<strong>#</strong> сообщения} other {<strong>#</strong> сообщений}}. Пользователи должны больше читать и отвечать – мы рекомендуем, по крайней мере {requiredPosts, plural, one {<strong>#</strong> сообщение} few {<strong>#</strong> сообщения} other {<strong>#</strong> сообщений}}. Только сотрудники могут видеть это сообщение.
     logs_error_rate_notice:
       reached_hour_MF: "<b>{relativeAge}</b> – <a href='{url}' target='_blank'>{rate, plural, one {# error/hour} или {# errors/hour}}</a> достигнут предел настройки сайта {limit, plural, one {# error/hour} или {# errors/hour}}."
       reached_minute_MF: "<b>{relativeAge}</b> – <a href='{url}' target='_blank'>{rate, plural, one {# error/minute} или {# errors/minute}}</a> достигнут предел настройки сайта {limit, plural, one {# error/minute} или {# errors/minute}}."
@@ -1433,8 +1439,8 @@ ru:
       reset: "Сброс пароля"
       complete_username: "Если учётная запись совпадает с псевдонимом <b>%{username}</b>, вы скоро получите письмо с инструкциями о том, как сбросить пароль."
       complete_email: "Если учётная запись совпадает с <b>%{email}</b>, вы должны получить письмо с инструкциями о том, как быстро сбросить ваш пароль."
-      complete_username_found: "Мы нашли учетную запись с псевдонимом <b>%{username}</b> и выслали вам на e-mail инструкции по сбросу пароля."
-      complete_email_found: "Мы нашли учетную запись с адресом электронной почты <b>%{email}</b> и выслали туда инструкцию по сбросу пароля."
+      complete_username_found: "Мы нашли учетную запись, которая соответствует псевдониму <b>%{username}</b>.  Вы должны получить e-mail письмо с инструкциями о том, как в ближайшее время сбросить пароль."
+      complete_email_found: "Мы нашли аккаунт, который соответствует <b>%{email}</b>. Вы должны получить e-mail письмо с инструкциями о том, как в ближайшее время сбросить пароль."
       complete_username_not_found: "Не найдено учетной записи с псевдонимом <b>%{username}</b>"
       complete_email_not_found: "Не найдено учетной записи с адресом электронной почты <b>%{email}</b>"
       help: "Электронное письмо не доходит? Для начала проверьте папку «Спам» вашего почтового ящика. <p>Не уверены в том, какой адрес использовали? Введите его и мы подскажем, есть ли он в нашей базе.</p><p>Если вы более не имеете доступа к связанному с вашей учётной записью адресу электронной почты, то, пожалуйста, свяжитесь с <a href='%{basePath}/about'>администрацией.</a></p>"
@@ -1571,6 +1577,7 @@ ru:
         few: "Введите хотя бы {{count}} элемента."
         many: "Введите хотя бы {{count}} элементов."
         other: "Введите хотя бы {{count}} элементов."
+      invalid_selection_length: "Необходимо выбрать не менее {{count}} символов."
     date_time_picker:
       from: От
       to: Кому
@@ -1712,12 +1719,13 @@ ru:
         reply_as_new_topic:
           label: Ответить в новой связанной теме
           desc: "Создать новую тему, связанную с этой темой"
+          confirm: "У вас есть сохраненный черновик новой темы, который будет перезаписан, если вы создадите связанную тему."
         reply_as_private_message:
           label: Новое сообщение
           desc: Создать новое личное сообщение
         reply_to_topic:
           label: Ответить на тему
-          desc: "Ответить на тему в целом, а на конкретное сообщение"
+          desc: "Ответить на тему в целом, а не на конкретное сообщение"
         toggle_whisper:
           label: Включить шопот
           desc: Внутреннее сообщение доступно только персоналу
@@ -1830,11 +1838,11 @@ ru:
       default_image_alt_text: изображение
     search:
       sort_by: "Сортировка"
-      relevance: "По смыслу"
-      latest_post: "С недавними сообщениями"
-      latest_topic: "Последняя тема"
-      most_viewed: "Самые просматриваемые"
-      most_liked: "Больше всего симпатий"
+      relevance: "По соответствию"
+      latest_post: "По недавним сообщениям"
+      latest_topic: "По недавним темам"
+      most_viewed: "По самым просматриваемым"
+      most_liked: "По количеству симпатий"
       select_all: "Выбрать все"
       clear_all: "Сбросить все"
       too_short: "Слишком короткое слово для поиска."
@@ -1885,7 +1893,7 @@ ru:
           tracking: За которыми я слежу
           private: В моих сообщениях
           bookmarks: В моих закладках
-          first: Только первые сообщения в темах
+          first: Только в первом сообщении темы
           pinned: Закреплённые
           unpinned: Незакреплённые
           seen: Прочитанные
@@ -1908,7 +1916,7 @@ ru:
             label: Дата
             before: До (включая)
             after: Начиная с
-    hamburger_menu: "перейти к другому списку тем или другому разделу"
+    hamburger_menu: "Перейти к другому списку тем или другому разделу"
     new_item: "новый"
     go_back: "вернуться"
     not_logged_in_user: "страница пользователя с историей его последней активности и настроек"
@@ -2031,15 +2039,15 @@ ru:
         many: "У вас {{count}} непрочитанных старых сообщений в этой теме"
         other: "У вас {{count}} непрочитанных старых сообщений в этой теме"
       new_posts:
-        one: "в этой теме {{count}} новое сообщение с её последнего просмотра вами"
-        few: "в этой теме {{count}} новых сообщения с её последнего просмотра вами"
-        many: "в этой теме {{count}} новых сообщений с её последнего просмотра вами"
-        other: "в этой теме {{count}} новых сообщений с её последнего просмотра вами"
+        one: "В этой теме {{count}} новое сообщение с её последнего просмотра вами"
+        few: "В этой теме {{count}} новых сообщения с её последнего просмотра вами"
+        many: "В этой теме {{count}} новых сообщений с её последнего просмотра вами"
+        other: "В этой теме {{count}} новых сообщений с её последнего просмотра вами"
       likes:
-        one: "в теме {{count}} лайк"
-        few: "в теме {{count}} лайка"
-        many: "в теме {{count}} лайков"
-        other: "в теме {{count}} лайков"
+        one: "В теме {{count}} лайк"
+        few: "В теме {{count}} лайка"
+        many: "В теме {{count}} лайков"
+        other: "В теме {{count}} лайков"
       back_to_list: "Вернуться к списку тем"
       options: "Опции темы"
       show_links: "Показать ссылки в теме"
@@ -2050,12 +2058,12 @@ ru:
       group_join: "Вам нужно присоединиться к группе `{{name}}` чтобы увидеть эту тему."
       group_request_sent: "Ваш запрос на членство в группе был отправлен. Вам сообщат, когда  будет одобрено."
       unread_indicator: "Никто еще не дочитал до конца этой темы."
-      read_more_MF: "У вас осталось { UNREAD, plural, =0 {} one { <a href='{basePath}/unread'>1 непрочитанная</a> } other { <a href='{basePath}/unread'># непрочитанных</a> } } { NEW, plural, =0 {} one { {BOTH, select, true{и } false { } other{}} <a href='{basePath}/new'>1 новая</a> тема} other { {BOTH, select, true{и } false { } other{}} <a href='{basePath}/new'># новых</a> тем} }, вы также можете {CATEGORY, select, true {посмотреть другие темы в разделе {catLink}} false {{latestLink}} other {}}"
+      read_more_MF: "У вас осталось { UNREAD, plural, =0 {} one { <a href='{basePath}/unread'>1 непрочитанная</a> } few { <a href='{basePath}/unread'>1 непрочитанные</a> } other { <a href='{basePath}/unread'># непрочитанных</a> } } { NEW, plural, =0 {} one { {BOTH, select, true{и } false { } other{}} <a href='{basePath}/new'>1 новая</a> тема} other { {BOTH, select, true{и } false { } other{}} <a href='{basePath}/new'># новых</a> тем} }, вы также можете {CATEGORY, select, true {посмотреть другие темы в разделе {catLink}} false {{latestLink}} other {}}"
       browse_all_categories: Просмотреть все разделы
       view_latest_topics: посмотреть последние темы
       suggest_create_topic: "Почему бы вам не создать новую тему?"
-      jump_reply_up: перейти к более ранним ответам
-      jump_reply_down: перейти к более поздним ответам
+      jump_reply_up: Перейти к более ранним ответам
+      jump_reply_down: Перейти к более поздним ответам
       deleted: "Тема удалена"
       topic_status_update:
         title: "Таймер темы"
@@ -2126,11 +2134,11 @@ ru:
         go_top: "перейти наверх"
         go_bottom: "перейти вниз"
         go: "=>"
-        jump_bottom: "перейти к последнему сообщению"
-        jump_prompt: "перейти к..."
+        jump_bottom: "Перейти к последнему сообщению"
+        jump_prompt: "Перейти к..."
         jump_prompt_of: "из %{count} сообщений"
         jump_prompt_long: "Перейти к..."
-        jump_bottom_with_number: "перейти к сообщению %{post_number}"
+        jump_bottom_with_number: "Перейти к сообщению %{post_number}"
         jump_prompt_to_date: "дата"
         jump_prompt_or: "или"
         total: всего сообщений
@@ -2349,11 +2357,11 @@ ru:
           many: "Пожалуйста, выберите нового владельца для сообщений <b>@{{old_user}}</b>"
           other: "Пожалуйста, выберите нового владельца {{count}} сообщений для <b>@{{old_user}}</b>"
       change_timestamp:
-        title: "Изменить временную метку..."
-        action: "Изменить временную метку"
-        invalid_timestamp: "Временная метка не может быть в будущем"
-        error: "При изменении временной метки темы возникла ошибка"
-        instructions: "Пожалуйста, выберите новую временную метку. Сообщения в теме будут обновлены, чтобы убрать временные различия."
+        title: "Изменить метку времени..."
+        action: "Изменить метку времени"
+        invalid_timestamp: "Метка времени не может быть в будущем"
+        error: "При изменении метки времени темы возникла ошибка"
+        instructions: "Пожалуйста, выберите новую метку времени. Сообщения в теме будут обновлены, чтобы убрать различия во времени."
       multi_select:
         select: "Выбрать"
         selected: "Выбрано ({{count}})"
@@ -2446,7 +2454,7 @@ ru:
         no_save_draft: "Нет, сохраните черновик"
         yes_value: "Да, отменить редактирование"
       abandon:
-        confirm: "Вы действительно хотите отказаться от сообщения?"
+        confirm: "Вы действительно хотите отказаться от создания сообщения?"
         no_value: "Нет, оставить"
         no_save_draft: "Нет, сохраните черновик"
         yes_value: "Да, отказаться"
@@ -2602,11 +2610,15 @@ ru:
         name: "Имя"
         name_placeholder: "Присвойте имя закладке (необязательно)"
         set_reminder: "Настроить напоминание (необязательно)"
+        actions:
+          delete_bookmark:
+            name: "Удалить закладку"
+            description: "Удаляет закладку из вашего профиля и останавливает все напоминания о закладке"
     category:
       can: "может&hellip; "
       none: "(вне раздела)"
       all: "Все разделы"
-      choose: "разделе&hellip;"
+      choose: "Выберите раздел&hellip;"
       edit: "Изменить"
       edit_dialog_title: "Редактировать: %{categoryName}"
       view: "Просмотр тем по разделам"
@@ -2738,7 +2750,7 @@ ru:
       notify_action: "Сообщение"
       official_warning: "Официальное предупреждение"
       delete_spammer: "Удалить спамера"
-      delete_confirm_MF: "Вы собираетесь удалить {POSTS, plural, one {<b>1</b> сообщение} other {<b>#</b> сообщений}} и {TOPICS, plural, one {<b>1</b> тему} other {<b>#</b> темы}} этого пользователя, а так же удалить его учётную запись, добавить его IP-адрес <b>{ip_address}</b> и его почтовый адрес <b>{email}</b> в чёрный список. Вы действительно действительно ваши помыслы чисты и действия не продиктованы гневом?"
+      delete_confirm_MF: "Вы собираетесь удалить {POSTS, plural, one {<b>1</b> сообщение} few {<b>#</b> сообщения} other {<b>#</b> сообщений}} и {TOPICS, plural, one {<b>1</b> тему} few {<b>#</b> темы} other {<b>#</b> тем}} этого пользователя, а так же удалить его учётную запись, добавить его IP-адрес <b>{ip_address}</b> и его почтовый адрес <b>{email}</b> в чёрный список. Вы действительно действительно ваши помыслы чисты и действия не продиктованы гневом?"
       yes_delete_spammer: "Да, удалить спамера"
       ip_address_missing: "(не доступно)"
       hidden_email_address: "(скрыто)"
@@ -2813,10 +2825,11 @@ ru:
         help: "Тема исключена из всех списков тем и доступна только по прямой ссылке"
       personal_message:
         title: "Эта тема является личным сообщением"
+        help: "Эта тема является личным сообщением"
     posts: "Сообщ."
     posts_long: "{{number}} сообщений в теме"
     posts_likes_MF: |
-      В этой теме {count, plural, one {1 сообщение} other {# сообщений}} {ratio, select,
+      В этой теме {count, plural, one {1 сообщение} few {# сообщения} other {# сообщений}} {ratio, select,
       low {с высоким рейтингом симпатий}
       med {с очень высоким рейтингом симпатий}
       high {с чрезвычайно высоким рейтингом симпатий}
@@ -2830,10 +2843,10 @@ ru:
       other: "просмотров"
     replies: "Ответов"
     views_long:
-      one: "тема просмотрена %{count} раз"
-      few: "тема просмотрена {{number}} раза"
-      many: "тема просмотрена {{number}} раз"
-      other: "тема просмотрена {{number}} раз"
+      one: "Тема просмотрена %{count} раз"
+      few: "Тема просмотрена {{number}} раза"
+      many: "Тема просмотрена {{number}} раз"
+      other: "Тема просмотрена {{number}} раз"
     activity: "Активность"
     likes: "Нрав."
     likes_lowercase:
@@ -3054,15 +3067,6 @@ ru:
           name: Прочее
         posting:
           name: Публикации
-    google_search: |
-      <h3>Искать с помощью Google</h3>
-      <p>
-      <form action='//google.com/search' id='google-search' onsubmit="document.getElementById('google-query').value = 'site:' + window.location.host + ' ' + document.getElementById('user-query').value; return true;">
-      <input type="text" id='user-query' value="">
-      <input type='hidden' id='google-query' name="q">
-      <button class="btn btn-primary">Google</button>
-      </form>
-      </p>
     tagging:
       all_tags: "Все теги"
       other_tags: "Изменить теги"
@@ -3073,6 +3077,7 @@ ru:
       choose_for_topic: "Выберите теги для этой темы (опционально)"
       info: "Информация"
       default_info: "Этот тег не ограничен никакими разделами и не имеет синонимов."
+      category_restricted: "Этот тег ограничен категориями, к которым у вас нет разрешения на доступ."
       synonyms: "Синонимы"
       synonyms_description: "При использовании следующих тегов они будут заменены на <b>%{base_tag_name}</b>."
       tag_groups_info:
@@ -3088,6 +3093,11 @@ ru:
       edit_synonyms: "Управление синонимами"
       add_synonyms_label: "Добавить синонимы:"
       add_synonyms: "Добавить"
+      add_synonyms_explanation:
+        one: "Везде, где используется этот тег, он будет заменён на тег <b>%{tag_name}</b>. Вы действительно хотите внести эти изменения?"
+        few: "Везде, где используются эти теги, они будут заменены на тег <b>%{tag_name}</b>. Вы действительно хотите внести эти изменения?"
+        many: "Везде, где используются эти теги, они будут заменены на тег <b>%{tag_name}</b>. Вы действительно хотите внести эти изменения?"
+        other: "Везде, где используются эти теги, они будут заменены на тег <b>%{tag_name}</b>. Вы действительно хотите внести эти изменения?"
       add_synonyms_failed: "Следующие теги не могут быть добавлены в качестве синонимов: <b>%{tag_names}</b>. Убедитесь, что они не имеют синонимов и не являются синонимами другого тега."
       remove_synonym: "Удалить синоним"
       delete_synonym_confirm: 'Вы действительно хотите удалить синоним "%{tag_name}"?'
@@ -3902,8 +3912,8 @@ ru:
           when: "Когда"
           context: "Контекст"
           details: "Подробности"
-          previous_value: "Старое"
-          new_value: "Новое"
+          previous_value: "Старое значение"
+          new_value: "Новое значение"
           diff: "Различия"
           show: "Показать"
           modal_title: "Подробности"
@@ -4148,10 +4158,10 @@ ru:
         clear_penalty_history:
           title: "Очистить историю штрафов"
           description: "пользователи со штрафами не могут достичь TL3"
-        delete_all_posts_confirm_MF: "Вы собираетесь удалить {POSTS, plural, one {1 сообщение} other {# сообщений}} и {TOPICS, plural, one {1 тему} other {# тем}}. Вы уверены?"
+        delete_all_posts_confirm_MF: "Вы собираетесь удалить {POSTS, plural, one {1 сообщение} few {# сообщения} other {# сообщений}} и {TOPICS, plural, one {1 тему} few {# темы} other {# тем}}. Вы уверены?"
         silence: "Заблокировать"
         unsilence: "Разблокировать"
-        silenced: "Заброкирован?"
+        silenced: "Заблокирован?"
         moderator: "Модератор?"
         admin: "Администратор?"
         suspended: "Заморожен?"
@@ -4470,9 +4480,10 @@ ru:
           description: Присуждение награды сразу нескольким пользователям.
           no_badge_selected: "Пожалуйста, выберите награду."
           perform: "Наградить пользователей"
-          upload_csv: Загрузите файл в формате <b>CSV</b> с электронными адресами пользователей
-          aborted: "Пожалуйста, загрузите файл в формате <b>CSV</b>, содержащий адреса электронной почты пользователей."
+          upload_csv: Загрузите файл в формате <b>CSV</b> с электронными адресами или псевдонимами пользователей
+          aborted: "Пожалуйста, загрузите файл в формате <b>CSV</b>, содержащий адреса электронной почты или псевдонимы пользователей."
           success: "Файл успешно загружен, пользователи получат награды в ближайшее время."
+          replace_owners: Удалить значок от предыдущих владельцев
       emoji:
         title: "Иконки"
         help: "Добавить новые смайлики-emoji, которые будут доступны всем. (Подсказка: можно перетаскивать несколько файлов за раз)"

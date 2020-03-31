@@ -20,10 +20,10 @@ class CategoryList
     find_categories
 
     prune_empty
-    prune_muted
     find_user_data
     sort_unpinned
     trim_results
+    demote_muted
 
     if preloaded_topic_custom_fields.present?
       displayable_topics = @categories.map(&:displayable_topics)
@@ -139,10 +139,6 @@ class CategoryList
     @categories.delete_if { |c| c.uncategorized? && c.displayable_topics.blank? }
   end
 
-  def prune_muted
-    @categories.delete_if { |c| c.notification_level == CategoryUser.notification_levels[:muted] }
-  end
-
   # Attach some data for serialization to each topic
   def find_user_data
     if @guardian.current_user && @all_topics.present?
@@ -165,6 +161,12 @@ class CategoryList
         end
       end
     end
+  end
+
+  def demote_muted
+    muted_categories = @categories.select { |category| category.notification_level == 0 }
+    @categories = @categories.reject { |category| category.notification_level == 0 }
+    @categories.concat muted_categories
   end
 
   def trim_results

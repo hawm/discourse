@@ -245,7 +245,7 @@ describe Plugin::Instance do
       plugin.notify_before_auth
       expect(DiscoursePluginRegistry.auth_providers.count).to eq(1)
       auth_provider = DiscoursePluginRegistry.auth_providers.to_a[0]
-      expect(auth_provider.authenticator.name).to eq('ubuntu')
+      expect(auth_provider.authenticator.name).to eq('facebook')
     end
 
     it "finds all the custom assets" do
@@ -536,6 +536,32 @@ describe Plugin::Instance do
       Plugin::Instance.new.extend_list_method Reviewable, :types, [new_element]
 
       expect(Reviewable.types).to match_array(current_list << new_element)
+    end
+  end
+
+  describe '#register_emoji' do
+    before do
+      Plugin::CustomEmoji.clear_cache
+    end
+
+    it 'allows to register an emoji' do
+      Plugin::Instance.new.register_emoji("foo", "/foo/bar.png")
+
+      custom_emoji = Emoji.custom.first
+
+      expect(custom_emoji.name).to eq("foo")
+      expect(custom_emoji.url).to eq("/foo/bar.png")
+      expect(custom_emoji.group).to eq(Emoji::DEFAULT_GROUP)
+    end
+
+    it 'allows to register an emoji with a group' do
+      Plugin::Instance.new.register_emoji("bar", "/baz/bar.png", "baz")
+
+      custom_emoji = Emoji.custom.first
+
+      expect(custom_emoji.name).to eq("bar")
+      expect(custom_emoji.url).to eq("/baz/bar.png")
+      expect(custom_emoji.group).to eq("baz")
     end
   end
 end

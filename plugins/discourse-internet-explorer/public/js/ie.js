@@ -321,6 +321,16 @@ if (!String.prototype.repeat) {
   };
 }
 
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith#Polyfill
+if (!String.prototype.startsWith) {
+  Object.defineProperty(String.prototype, "startsWith", {
+    value: function(search, rawPos) {
+      var pos = rawPos > 0 ? rawPos | 0 : 0;
+      return this.substring(pos, pos + search.length) === search;
+    }
+  });
+}
+
 /*!
  * Symbol-ES6 v0.1.2
  * ES6 Symbol polyfill in pure ES5.
@@ -960,3 +970,12 @@ if (!String.prototype.repeat) {
   return ES6;
 });
 /* eslint-enable */
+
+// Polyfill Promise - used by popper.js
+window.addEventListener(
+  "load",
+  function() {
+    window.Promise = require("rsvp").Promise;
+  },
+  false
+);

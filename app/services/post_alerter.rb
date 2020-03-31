@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class PostAlerter
+  USER_BATCH_SIZE = 100
+
   def self.post_created(post, opts = {})
     PostAlerter.new(opts).after_save_post(post, true)
     post
@@ -140,7 +142,7 @@ class PostAlerter
     users = User.where(id: user_ids)
 
     DiscourseEvent.trigger(:before_create_notifications_for_users, users, post)
-    users.each do |user|
+    each_user_in_batches(users) do |user|
       create_notification(user, Notification.types[:watching_first_post], post)
     end
   end
@@ -248,8 +250,8 @@ class PostAlerter
     # TODO decide if it makes sense to also publish a desktop notification
   end
 
-  def should_notify_edit?(notification, opts)
-    notification.data_hash["display_username"] != opts[:display_username]
+  def should_notify_edit?(notification, post, opts)
+    notification.data_hash["display_username"] != (opts[:display_username].presence || post.user.username)
   end
 
   def should_notify_like?(user, notification)
@@ -258,9 +260,10 @@ class PostAlerter
     false
   end
 
-  def should_notify_previous?(user, notification, opts)
+  def should_notify_previous?(user, post, notification, opts)
+    return false unless notification
     case notification.notification_type
-    when Notification.types[:edited] then should_notify_edit?(notification, opts)
+    when Notification.types[:edited] then should_notify_edit?(notification, post, opts)
     when Notification.types[:liked]  then should_notify_like?(user, notification)
     else false
     end
@@ -277,7 +280,7 @@ class PostAlerter
 
     DiscourseEvent.trigger(:before_create_notification, user, type, post, opts)
 
-    return if user.blank? || user.bot?
+    return if user.blank? || user.bot? || post.blank?
     return if (topic = post.topic).blank?
 
     is_liked = type == Notification.types[:liked]
@@ -328,7 +331,7 @@ class PostAlerter
     # Don't notify the same user about the same type of notification on the same post
     existing_notification_of_same_type = existing_notifications.find { |n| n.notification_type == type }
 
-    return if existing_notification_of_same_type && !should_notify_previous?(user, existing_notification_of_same_type, opts)
+    return if existing_notifications.present? && !should_notify_previous?(user, post, existing_notification_of_same_type, opts)
 
     notification_data = {}
 
@@ -609,16 +612,24 @@ class PostAlerter
 
     DiscourseEvent.trigger(:before_create_notifications_for_users, notify, post)
 
-    already_seen_users = TopicUser.where(topic_id: post.topic.id).where("highest_seen_post_number >= ?", post.post_number).pluck(:user_id)
+    already_seen_user_ids = Set.new TopicUser.where(topic_id: post.topic.id).where("highest_seen_post_number >= ?", post.post_number).pluck(:user_id)
 
-    notify.pluck(:id).each do |user_id|
-      notification_type = already_seen_users.include?(user_id) ? Notification.types[:edited] : Notification.types[:posted]
-      user = User.find_by(id: user_id)
+    each_user_in_batches(notify) do |user|
+      notification_type = already_seen_user_ids.include?(user.id) ? Notification.types[:edited] : Notification.types[:posted]
       create_notification(user, notification_type, post)
     end
   end
 
   def warn_if_not_sidekiq
     Rails.logger.warn("PostAlerter.#{caller_locations(1, 1)[0].label} was called outside of sidekiq") unless Sidekiq.server?
+  end
+
+  private
+
+  def each_user_in_batches(users)
+    # This is race-condition-safe, unlike #find_in_batches
+    users.pluck(:id).each_slice(USER_BATCH_SIZE) do |user_ids_batch|
+      User.where(id: user_ids_batch).each { |user| yield(user) }
+    end
   end
 end

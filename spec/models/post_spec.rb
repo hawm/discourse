@@ -951,6 +951,16 @@ describe Post do
       expect(p6.reply_ids).to be_empty # quotes itself
     end
 
+    it "ignores posts moved to other topics" do
+      p2.update_column(:topic_id, Fabricate(:topic).id)
+      expect(p1.reply_ids).to be_blank
+    end
+
+    it "doesn't include the same reply twice" do
+      PostReply.create!(post: p4, reply: p1)
+      expect(p1.reply_ids.size).to eq(4)
+    end
+
     it "does not skip any replies" do
       expect(p1.reply_ids(only_replies_to_single_post: false)).to eq([{ id: p2.id, level: 1 }, { id: p4.id, level: 2 }, { id: p5.id, level: 3 }, { id: p6.id, level: 2 }])
       expect(p2.reply_ids(only_replies_to_single_post: false)).to eq([{ id: p4.id, level: 1 }, { id: p5.id, level: 2 }, { id: p6.id, level: 1 }])
@@ -1036,13 +1046,13 @@ describe Post do
       end
 
       describe 'when user can not mention a group' do
-        it "should not create the mention" do
+        it "should not create the mention with the notify class" do
           post = Fabricate(:post, raw: "hello @#{group.name}")
           post.trigger_post_process
           post.reload
 
           expect(post.cooked).to eq(
-            %Q|<p>hello <span class="mention">@#{group.name}</span></p>|
+            %Q|<p>hello <a class="mention-group" href="/groups/#{group.name}">@#{group.name}</a></p>|
           )
         end
       end
@@ -1058,7 +1068,7 @@ describe Post do
           post.reload
 
           expect(post.cooked).to eq(
-            %Q|<p>hello <a class="mention-group" href="/groups/#{group.name}">@#{group.name}</a></p>|
+            %Q|<p>hello <a class="mention-group notify" href="/groups/#{group.name}">@#{group.name}</a></p>|
           )
         end
       end
@@ -1075,7 +1085,7 @@ describe Post do
           post.reload
 
           expect(post.cooked).to eq(
-            %Q|<p>hello <a class="mention-group" href="/groups/#{group.name}">@#{group.name}</a></p>|
+            %Q|<p>hello <a class="mention-group notify" href="/groups/#{group.name}">@#{group.name}</a></p>|
           )
         end
       end
@@ -1113,7 +1123,7 @@ describe Post do
       SiteSetting.newuser_max_links = 3
       user = Fabricate(:user, staged: true, trust_level: 0)
       user.created_at = 1.hour.ago
-      user.unstage
+      user.unstage!
       post = Fabricate(:post, raw: raw, user: user)
       expect(post.has_host_spam?).to eq(true)
     end
@@ -1122,8 +1132,8 @@ describe Post do
       SiteSetting.newuser_spam_host_threshold = 1
       SiteSetting.newuser_max_links = 3
       user = Fabricate(:user, staged: true, trust_level: 0)
-      user.created_at = 1.day.ago
-      user.unstage
+      user.created_at = 2.days.ago
+      user.unstage!
       post = Fabricate(:post, raw: raw, user: user)
       expect(post.has_host_spam?).to eq(false)
     end
@@ -1162,7 +1172,7 @@ describe Post do
 
       result = post.rebake!
 
-      expect(post.baked_at).not_to eq(first_baked)
+      expect(post.baked_at).not_to eq_time(first_baked)
       expect(post.cooked).to eq(first_cooked)
       expect(result).to eq(true)
     end
@@ -1214,7 +1224,7 @@ describe Post do
       baked = post.baked_at
       Post.rebake_old(100)
       post.reload
-      expect(post.baked_at).to eq(baked)
+      expect(post.baked_at).to eq_time(baked)
     end
 
     it "will rate limit globally" do
@@ -1366,6 +1376,16 @@ describe Post do
           expect(image_upload.access_control_post_id).to eq(post.id)
           expect(video_upload.access_control_post_id).not_to eq(post.id)
         end
+
+        context "for custom emoji" do
+          before do
+            CustomEmoji.create(name: "meme", upload: image_upload)
+          end
+          it "never sets an access control post because they should not be secure" do
+            post.link_post_uploads
+            expect(image_upload.reload.access_control_post_id).to eq(nil)
+          end
+        end
       end
     end
 
@@ -1395,13 +1415,14 @@ describe Post do
         )
       end
 
-      it "marks image uploads as secure in PMs when secure_media is ON" do
+      it "marks image and attachment uploads as secure in PMs when secure_media is ON" do
+        SiteSetting.secure_media = true
         post = Fabricate(:post, raw: raw, user: user, topic: Fabricate(:private_message_topic, user: user))
         post.link_post_uploads
         post.update_uploads_secure_status
 
         expect(PostUpload.where(post: post).joins(:upload).pluck(:upload_id, :secure)).to contain_exactly(
-          [attachment_upload.id, false],
+          [attachment_upload.id, true],
           [image_upload.id, true]
         )
       end
@@ -1419,14 +1440,15 @@ describe Post do
       end
 
       it "marks attachments as secure when relevant setting is enabled" do
-        SiteSetting.prevent_anons_from_downloading_files = true
-        post = Fabricate(:post, raw: raw, user: user, topic: Fabricate(:topic, user: user))
+        SiteSetting.secure_media = true
+        private_category = Fabricate(:private_category, group: Fabricate(:group))
+        post = Fabricate(:post, raw: raw, user: user, topic: Fabricate(:topic, user: user, category: private_category))
         post.link_post_uploads
         post.update_uploads_secure_status
 
         expect(PostUpload.where(post: post).joins(:upload).pluck(:upload_id, :secure)).to contain_exactly(
           [attachment_upload.id, true],
-          [image_upload.id, false]
+          [image_upload.id, true]
         )
       end
 
@@ -1453,10 +1475,7 @@ describe Post do
     end
 
     def updates_topic_updated_at
-
-      freeze_time 1.day.from_now
-      time = Time.now
-
+      time = freeze_time 1.day.from_now
       result = yield
 
       topic.reload
@@ -1506,6 +1525,9 @@ describe Post do
       upload2 = Fabricate(:upload)
       upload3 = Fabricate(:video_upload)
       upload4 = Fabricate(:upload)
+      upload5 = Fabricate(:upload)
+      upload6 = Fabricate(:video_upload)
+      upload7 = Fabricate(:upload, extension: "vtt")
 
       set_cdn_url "https://awesome.com/somepath"
 
@@ -1520,6 +1542,11 @@ describe Post do
       ![](http://example.com/external.png)
 
       #{Discourse.base_url}#{upload3.short_path}
+
+      <video poster="#{Discourse.base_url}#{upload5.url}">
+        <source src="#{Discourse.base_url}#{upload6.url}" type="video/mp4" />
+        <track src="#{Discourse.base_url}#{upload7.url}" label="English" kind="subtitles" srclang="en" default />
+      </video>
       RAW
 
       urls = []
@@ -1534,14 +1561,20 @@ describe Post do
         "#{GlobalSetting.cdn_url}#{upload1.url}",
         "#{GlobalSetting.cdn_url}#{upload4.url}",
         "#{Discourse.base_url}#{upload2.url}",
-        "#{Discourse.base_url}#{upload3.short_path}"
+        "#{Discourse.base_url}#{upload3.short_path}",
+        "#{Discourse.base_url}#{upload5.url}",
+        "#{Discourse.base_url}#{upload6.url}",
+        "#{Discourse.base_url}#{upload7.url}"
       )
 
       expect(paths).to contain_exactly(
         upload1.url,
         upload4.url,
         upload2.url,
-        nil
+        nil,
+        upload5.url,
+        upload6.url,
+        upload7.url
       )
     end
 

@@ -844,7 +844,7 @@ module Email
                                           embedded_user: lambda { find_or_create_user(email, display_name) })
       return false unless post
 
-      if post&.topic
+      if post.topic
         # mark post as seen for the forwarder
         PostTiming.record_timing(user_id: user.id, topic_id: post.topic_id, post_number: post.post_number, msecs: 5000)
 
@@ -859,6 +859,8 @@ module Email
                        topic: post.topic,
                        post_type: post_type,
                        skip_validations: user.staged?)
+        else
+          post.topic.add_small_action(user, "forwarded")
         end
       end
 
@@ -1044,7 +1046,7 @@ module Email
           # create the upload for the user
           opts = { for_group_message: options[:is_group_message] }
           upload = UploadCreator.new(tmp, attachment.filename, opts).create_for(user.id)
-          if upload&.valid?
+          if upload.errors.empty?
             # try to inline images
             if attachment.content_type&.start_with?("image/")
               if raw[attachment.url]

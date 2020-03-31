@@ -42,6 +42,7 @@ class Category < ActiveRecord::Base
 
   has_many :category_groups, dependent: :destroy
   has_many :groups, through: :category_groups
+  has_many :topic_timers, dependent: :destroy
 
   has_and_belongs_to_many :web_hooks
 
@@ -316,7 +317,7 @@ class Category < ActiveRecord::Base
     end
 
     # only allow to use category itself id.
-    match_id = /^(\d+)-/.match(self.slug)
+    match_id = /^(\d+)-category/.match(self.slug)
     if match_id.present?
       errors.add(:slug, :invalid) if new_record? || (match_id[1] != self.id.to_s)
     end
@@ -682,17 +683,16 @@ class Category < ActiveRecord::Base
   def url
     url = @@url_cache[self.id]
     unless url
-      url = +"#{Discourse.base_uri}/c"
-      url << "/#{parent_category.slug_for_url}" if parent_category_id
-      url << "/#{slug_for_url}"
-      @@url_cache[self.id] = -url
+      url = "#{Discourse.base_uri}/c/#{slug_path.join('/')}"
+
+      @@url_cache[self.id] = url
     end
 
     url
   end
 
   def url_with_id
-    self.parent_category ? "#{url}/#{self.id}" : "#{Discourse.base_uri}/c/#{self.id}-#{self.slug}"
+    self.parent_category ? "#{url}/#{self.id}" : "#{Discourse.base_uri}/c/#{self.slug}/#{self.id}"
   end
 
   # If the name changes, try and update the category definition topic too if it's
@@ -708,7 +708,7 @@ class Category < ActiveRecord::Base
   def create_category_permalink
     old_slug = saved_changes.transform_values(&:first)["slug"]
     url = +"#{Discourse.base_uri}/c"
-    url << "/#{parent_category.slug}" if parent_category_id
+    url << "/#{parent_category.slug_path.join('/')}" if parent_category_id
     url << "/#{old_slug}"
     url = Permalink.normalize_url(url)
 
@@ -720,11 +720,7 @@ class Category < ActiveRecord::Base
   end
 
   def delete_category_permalink
-    if self.parent_category
-      permalink = Permalink.find_by_url("c/#{self.parent_category.slug}/#{slug}")
-    else
-      permalink = Permalink.find_by_url("c/#{slug}")
-    end
+    permalink = Permalink.find_by_url("c/#{slug_path.join('/')}")
     permalink.destroy if permalink
   end
 

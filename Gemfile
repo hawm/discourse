@@ -29,6 +29,8 @@ else
   gem 'sprockets-rails'
 end
 
+gem 'json'
+
 # TODO: At the moment Discourse does not work with Sprockets 4, we would need to correct internals
 # This is a desired upgrade we should get to.
 gem 'sprockets', '3.7.2'
@@ -66,7 +68,7 @@ gem 'http_accept_language', require: false
 # Ember related gems need to be pinned cause they control client side
 # behavior, we will push these versions up when upgrading ember
 gem 'ember-rails', '0.18.5'
-gem 'discourse-ember-source', '~> 3.10.0'
+gem 'discourse-ember-source', '~> 3.12.2'
 gem 'ember-handlebars-template', '0.8.0'
 
 gem 'barber'
@@ -98,8 +100,6 @@ gem 'nokogiri'
 gem 'css_parser', require: false
 
 gem 'omniauth'
-gem 'omniauth-openid'
-gem 'openid-redis-store'
 gem 'omniauth-facebook'
 gem 'omniauth-twitter'
 gem 'omniauth-instagram'
@@ -122,9 +122,6 @@ gem 'rinku'
 gem 'sanitize'
 gem 'sidekiq'
 gem 'mini_scheduler'
-
-# for sidekiq web
-gem 'tilt', require: false
 
 gem 'execjs', require: false
 gem 'mini_racer'
@@ -181,16 +178,17 @@ group :test, :development do
   gem 'shoulda-matchers', require: false
   gem 'rspec-html-matchers'
   gem 'pry-nav'
-  gem 'byebug', require: ENV['RM_INFO'].nil?
+  gem 'byebug', require: ENV['RM_INFO'].nil?, platform: :mri
   gem 'rubocop', require: false
   gem "rubocop-discourse", require: false
+  gem "rubocop-rspec", require: false
   gem 'parallel_tests'
 end
 
 group :development do
-  gem 'ruby-prof', require: false
+  gem 'ruby-prof', require: false, platform: :mri
   gem 'bullet', require: !!ENV['BULLET']
-  gem 'better_errors'
+  gem 'better_errors', platform: :mri
   gem 'binding_of_caller'
   gem 'yaml-lint'
   gem 'annotate'
@@ -211,7 +209,7 @@ gem 'htmlentities', require: false
 #  we are open to it. by deferring require to the initializer we can configure discourse installs without it
 
 gem 'flamegraph', require: false
-gem 'rack-mini-profiler', require: false
+gem 'rack-mini-profiler', require: ['enable_rails_patches']
 
 gem 'unicorn', require: false, platform: :mri
 gem 'puma', require: false
@@ -261,3 +259,10 @@ end
 gem 'webpush', require: false
 gem 'colored2', require: false
 gem 'maxminddb'
+
+# These are not direct dependencies, but we need to restrict
+# versions for compatibility with https://github.com/discourse/discourse-zendesk-plugin
+# These restrictions can be removed once the zendesk_api gem is updated
+# for newer versions of hashie and faraday
+gem 'hashie', '< 4.0.0', require: false # https://github.com/zendesk/zendesk_api_client_rb/pull/422
+gem 'faraday', '< 1.0.0', require: false # https://github.com/zendesk/zendesk_api_client_rb/pull/421
