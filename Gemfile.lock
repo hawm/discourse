@@ -1,5 +1,5 @@
 GEM
-  remote: https://rubygems.org/
+  remote: https://gems.ruby-china.com/
   specs:
     actionmailer (6.0.1)
       actionpack (= 6.0.1)
@@ -558,4 +558,4 @@ DEPENDENCIES
   yaml-lint
 
 BUNDLED WITH
-   2.1.1
+   2.1.4
