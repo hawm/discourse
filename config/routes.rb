@@ -45,6 +45,12 @@ Discourse::Application.routes.draw do
   get "finish-installation/confirm-email" => "finish_installation#confirm_email"
   put "finish-installation/resend-email" => "finish_installation#resend_email"
 
+  get "pub/check-slug" => "published_pages#check_slug"
+  get "pub/by-topic/:topic_id" => "published_pages#details"
+  put "pub/by-topic/:topic_id" => "published_pages#upsert"
+  delete "pub/by-topic/:topic_id" => "published_pages#destroy"
+  get "pub/:slug" => "published_pages#show"
+
   resources :directory_items
 
   get "site" => "site#site"
@@ -579,7 +585,6 @@ Discourse::Application.routes.draw do
   put "admin/groups/:id/members" => "groups#add_members", constraints: AdminConstraint.new
 
   resources :posts do
-    put "bookmark"
     delete "bookmark", to: "posts#destroy_bookmark"
     put "wiki"
     put "post_type"
@@ -600,7 +605,7 @@ Discourse::Application.routes.draw do
     end
   end
 
-  resources :bookmarks, only: %i[create destroy]
+  resources :bookmarks, only: %i[create destroy update]
 
   resources :notifications, except: :show do
     collection do

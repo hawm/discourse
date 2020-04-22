@@ -5,7 +5,7 @@ import { inject as service } from "@ember/service";
 import { inject } from "@ember/controller";
 import Controller from "@ember/controller";
 import DiscourseURL from "discourse/lib/url";
-import Quote from "discourse/lib/quote";
+import { buildQuote } from "discourse/lib/quote";
 import Draft from "discourse/models/draft";
 import Composer from "discourse/models/composer";
 import discourseComputed, {
@@ -13,7 +13,7 @@ import discourseComputed, {
   on
 } from "discourse-common/utils/decorators";
 import { getOwner } from "discourse-common/lib/get-owner";
-import { escapeExpression, safariHacksDisabled } from "discourse/lib/utilities";
+import { escapeExpression } from "discourse/lib/utilities";
 import {
   authorizesOneOrMoreExtensions,
   uploadIcon
@@ -54,7 +54,8 @@ function loadDraft(store, opts) {
       draftKey,
       draftSequence,
       draft: true,
-      composerState: Composer.DRAFT
+      composerState: Composer.DRAFT,
+      topic: opts.topic
     };
 
     serializedFields.forEach(f => {
@@ -135,10 +136,6 @@ export default Controller.extend({
     "model.composeState"
   )
   focusTarget(replyingToTopic, creatingPM, usernames, composeState) {
-    if (this.capabilities.isIOS && !safariHacksDisabled()) {
-      return "none";
-    }
-
     // Focus on usernames if it's blank or if it's just you
     usernames = usernames || "";
     if (
@@ -500,15 +497,14 @@ export default Controller.extend({
 
       if (postId) {
         this.set("model.loading", true);
-        const composer = this;
 
         return this.store.find("post", postId).then(post => {
-          const quote = Quote.build(post, post.raw, {
-            raw: true,
+          const quote = buildQuote(post, post.raw, {
             full: true
           });
+
           toolbarEvent.addText(quote);
-          composer.set("model.loading", false);
+          this.set("model.loading", false);
         });
       }
     },
