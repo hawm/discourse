@@ -1,3 +1,4 @@
+import I18n from "I18n";
 import EmberObject from "@ember/object";
 import { moduleForWidget, widgetTest } from "helpers/widget-test";
 
@@ -532,15 +533,12 @@ widgetTest("can't bookmark", {
 
 widgetTest("bookmark", {
   template:
-    '{{mount-widget widget="post" args=args toggleBookmarkWithReminder=(action "toggleBookmarkWithReminder")}}',
+    '{{mount-widget widget="post" args=args toggleBookmark=(action "toggleBookmark")}}',
   beforeEach() {
     const args = { canBookmark: true };
 
     this.set("args", args);
-    this.on(
-      "toggleBookmarkWithReminder",
-      () => (args.bookmarked_with_reminder = true)
-    );
+    this.on("toggleBookmark", () => (args.bookmarked = true));
   },
   async test(assert) {
     assert.equal(find(".post-menu-area .bookmark").length, 1);

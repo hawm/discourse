@@ -1,3 +1,4 @@
+import I18n from "I18n";
 import { run } from "@ember/runloop";
 import selectKit from "helpers/select-kit-helper";
 import { acceptance } from "helpers/qunit-helpers";
@@ -524,7 +525,7 @@ QUnit.test(
     );
 
     assert.ok(
-      find(".composer-fields .whisper")
+      find(".composer-fields .unlist")
         .text()
         .indexOf(I18n.t("composer.unlist")) > 0,
       "it sets the topic to unlisted"

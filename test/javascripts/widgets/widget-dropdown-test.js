@@ -1,3 +1,4 @@
+import I18n from "I18n";
 import { moduleForWidget, widgetTest } from "helpers/widget-test";
 
 moduleForWidget("widget-dropdown");
@@ -300,5 +301,20 @@ widgetTest("bodyClass option", {
     assert.ok(body().classList.contains("widget-dropdown-body"));
     assert.ok(body().classList.contains("gigantic"));
     assert.ok(body().classList.contains("and-yet-small"));
+  }
+});
+
+widgetTest("caret option", {
+  template: TEMPLATE,
+
+  beforeEach() {
+    this.setProperties(DEFAULT_CONTENT);
+    this.set("options", { caret: true });
+  },
+
+  test(assert) {
+    assert.ok(
+      exists("#my-dropdown .widget-dropdown-header .d-icon-caret-down")
+    );
   }
 });

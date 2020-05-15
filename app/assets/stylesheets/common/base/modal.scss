@@ -141,6 +141,14 @@
   z-index: z("modal", "content");
   overflow: auto;
 
+  html.keyboard-visible body.ios-safari-composer-hacks & {
+    height: calc(var(--composer-vh, 1vh) * 100);
+    .modal-inner-container {
+      max-height: 100%;
+      margin-bottom: 0px;
+    }
+  }
+
   &:not(.history-modal) {
     .modal-body:not(.reorder-categories):not(.poll-ui-builder) {
       max-height: 80vh !important;
@@ -723,8 +731,8 @@
 
       .modal-tab {
         list-style: none;
-        padding: s(1 2);
-        margin-right: s(1);
+        padding: 4px 8px;
+        margin-right: 4px;
         cursor: pointer;
 
         &.is-active {
@@ -734,7 +742,7 @@
           &.single-tab {
             background: none;
             color: $primary;
-            padding: s(1 0);
+            padding: 4px 0;
           }
         }
       }

@@ -1,12 +1,15 @@
 var define, requirejs;
 
 (function() {
-  // In future versions of ember we don't need this
   var EMBER_MODULES = {};
   var ALIASES = {
     "ember-addons/ember-computed-decorators":
-      "discourse-common/utils/decorators"
+      "discourse-common/utils/decorators",
+    "discourse/lib/raw-templates": "discourse-common/lib/raw-templates",
+    "preload-store": "discourse/lib/preload-store"
   };
+
+  // In future versions of ember we don't need this
   if (typeof Ember !== "undefined") {
     EMBER_MODULES = {
       jquery: { default: $ },
@@ -19,9 +22,7 @@ var define, requirejs;
         default: Ember.ArrayProxy
       },
       "@ember/component": {
-        default: Ember.Component,
-        TextArea: Ember.TextArea,
-        TextField: Ember.TextField
+        default: Ember.Component
       },
       "@ember/controller": {
         default: Ember.Controller,
@@ -129,11 +130,21 @@ var define, requirejs;
       "@ember/component/helper": {
         default: Ember.Helper
       },
+      "@ember/component/text-field": {
+        default: Ember.TextField
+      },
+      "@ember/component/text-area": {
+        default: Ember.TextArea
+      },
       "@ember/error": {
         default: Ember.error
       },
       "@ember/object/internals": {
         guidFor: Ember.guidFor
+      },
+      I18n: {
+        // eslint-disable-next-line
+        default: I18n
       }
     };
   }
@@ -258,6 +269,14 @@ var define, requirejs;
 
   function requireFrom(name, origin) {
     name = transformForAliases(name);
+
+    if (name === "discourse") {
+      // eslint-disable-next-line no-console
+      console.log(
+        "discourse has been moved to `discourse/app` - please update your code"
+      );
+      name = "discourse/app";
+    }
 
     if (name === "discourse/models/input-validation") {
       // eslint-disable-next-line no-console

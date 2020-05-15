@@ -144,4 +144,18 @@ module UserGuardian
     return false if topic.read_restricted_category? || topic.private_message?
     true
   end
+
+  def can_see_review_queue?
+    is_staff? || (
+      SiteSetting.enable_category_group_review &&
+      Reviewable
+        .where(reviewable_by_group_id: @user.group_users.pluck(:group_id))
+        .where('category_id IS NULL or category_id IN (?)', allowed_category_ids)
+        .exists?
+    )
+  end
+
+  def can_see_summary_stats?(target_user)
+    true
+  end
 end

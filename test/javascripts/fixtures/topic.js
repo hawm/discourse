@@ -1,3 +1,4 @@
+import I18n from "I18n";
 /*jshint maxlen:10000000 */
 export default {
   "/t/280/1.json": {
@@ -4060,7 +4061,6 @@ export default {
           alias_level: 99,
           visible: true,
           automatic_membership_email_domains: "",
-          automatic_membership_retroactive: false,
           primary_group: false,
           title: null,
           grant_trust_level: null,

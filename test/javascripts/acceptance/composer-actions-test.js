@@ -1,3 +1,4 @@
+import I18n from "I18n";
 import selectKit from "helpers/select-kit-helper";
 import { acceptance, updateCurrentUser } from "helpers/qunit-helpers";
 import { _clearSnapshots } from "select-kit/components/composer-actions";
@@ -338,6 +339,18 @@ QUnit.test(
     );
   }
 );
+
+QUnit.test("editing post", async assert => {
+  const composerActions = selectKit(".composer-actions");
+
+  await visit("/t/internationalization-localization/280");
+  await click("article#post_1 button.show-more-actions");
+  await click("article#post_1 button.edit");
+  await composerActions.expand();
+
+  assert.equal(composerActions.rows().length, 1);
+  assert.equal(composerActions.rowByIndex(0).value(), "reply_to_post");
+});
 
 acceptance("Composer Actions With New Topic Draft", {
   loggedIn: true,
