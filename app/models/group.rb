@@ -1,9 +1,10 @@
 # frozen_string_literal: true
 
 class Group < ActiveRecord::Base
-  # TODO(2021-04-22): remove
+  # TODO(2021-05-26): remove
   self.ignored_columns = %w{
     automatic_membership_retroactive
+    flair_url
   }
 
   include HasCustomFields
@@ -26,6 +27,8 @@ class Group < ActiveRecord::Base
   has_many :group_histories, dependent: :destroy
   has_many :category_reviews, class_name: 'Category', foreign_key: :reviewable_by_group_id, dependent: :nullify
   has_many :reviewables, foreign_key: :reviewable_by_group_id, dependent: :nullify
+
+  belongs_to :flair_upload, class_name: 'Upload'
 
   has_and_belongs_to_many :web_hooks
 
@@ -62,7 +65,6 @@ class Group < ActiveRecord::Base
   validate :automatic_membership_email_domains_format_validator
   validate :incoming_email_validator
   validate :can_allow_membership_requests, if: :allow_membership_requests
-  validates :flair_url, url: true, if: Proc.new { |g| g.flair_url && g.flair_url.exclude?('fa-') }
   validate :validate_grant_trust_level, if: :will_save_change_to_grant_trust_level?
 
   AUTO_GROUPS = {
@@ -739,6 +741,15 @@ class Group < ActiveRecord::Base
       DiscourseEvent.trigger(event, self)
       true
     end
+  end
+
+  def flair_type
+    return :icon if flair_icon.present?
+    return :image if flair_upload_id.present?
+  end
+
+  def flair_url
+    flair_icon.presence || flair_upload&.url
   end
 
   protected

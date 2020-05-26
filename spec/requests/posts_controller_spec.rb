@@ -675,6 +675,17 @@ describe PostsController do
           I18n.t("invalid_params", message: "category")
         )
       end
+
+      it 'will raise an error if specified embed_url is invalid' do
+        user = Fabricate(:admin)
+        master_key = Fabricate(:api_key).key
+
+        post "/posts.json",
+          params: { title: 'this is a test title', raw: 'this is test body', embed_url: '/test.txt' },
+          headers: { HTTP_API_USERNAME: user.username, HTTP_API_KEY: master_key }
+
+        expect(response.status).to eq(422)
+      end
     end
 
     describe "when logged in" do
@@ -814,7 +825,7 @@ describe PostsController do
         post "/posts.json", params: {
           raw: 'I can haz a test',
           title: 'I loves my test',
-          target_recipients: group.name,
+          target_recipients: "test_Group",
           archetype: Archetype.private_message
         }
 
@@ -954,13 +965,13 @@ describe PostsController do
 
       it 'creates a private post' do
         user_2 = Fabricate(:user)
-        user_3 = Fabricate(:user)
+        user_3 = Fabricate(:user, username: "foo_bar")
 
         post "/posts.json", params: {
           raw: 'this is the test content',
           archetype: 'private_message',
           title: "this is some post",
-          target_recipients: "#{user_2.username},#{user_3.username}"
+          target_recipients: "#{user_2.username},Foo_Bar"
         }
 
         expect(response.status).to eq(200)

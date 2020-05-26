@@ -2127,7 +2127,7 @@ RSpec.describe TopicsController do
     let(:topic) { post.topic }
 
     after do
-      Discourse.redis.flushall
+      Discourse.redis.flushdb
     end
 
     it 'returns first post of the topic' do
@@ -2707,6 +2707,24 @@ RSpec.describe TopicsController do
           .to eq_time(DateTime.parse(topic_status_update.execute_at.to_s))
 
         expect(json['duration']).to eq(topic_status_update.duration)
+      end
+
+      it 'should be able to delete a topic status update for delete_replies type' do
+        Fabricate(:topic_timer, topic: topic, status_type: TopicTimer.types[:delete_replies])
+
+        post "/t/#{topic.id}/timer.json", params: {
+          time: nil,
+          status_type: TopicTimer.types[7]
+        }
+
+        expect(response.status).to eq(200)
+        expect(topic.reload.public_topic_timer).to eq(nil)
+
+        json = response.parsed_body
+
+        expect(json['execute_at']).to eq(nil)
+        expect(json['duration']).to eq(nil)
+        expect(json['closed']).to eq(topic.closed)
       end
 
       describe 'publishing topic to category in the future' do

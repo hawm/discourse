@@ -165,6 +165,16 @@ class Plugin::Instance
     DiscoursePluginRegistry.register_editable_group_custom_field(field, self)
   end
 
+  # Request a new size for topic thumbnails
+  # Will respect plugin enabled setting is enabled
+  # Size should be an array with two elements [max_width, max_height]
+  def register_topic_thumbnail_size(size)
+    if !(size.kind_of?(Array) && size.length == 2)
+      raise ArgumentError.new("Topic thumbnail dimension is not valid")
+    end
+    DiscoursePluginRegistry.register_topic_thumbnail_size(size, self)
+  end
+
   def custom_avatar_column(column)
     reloadable_patch do |plugin|
       AvatarLookup.lookup_columns << column
@@ -393,15 +403,6 @@ class Plugin::Instance
   def register_seedfu_fixtures(paths)
     paths = [paths] if !paths.kind_of?(Array)
     SeedFu.fixture_paths.concat(paths)
-  end
-
-  # Applies to all sites in a multisite environment. Block is not called if
-  # plugin is not enabled. Block is called with `user_id` and has to return a
-  # boolean based on whether the given `user_id` should be ignored.
-  def register_ignore_draft_sequence_callback(&block)
-    reloadable_patch do |plugin|
-      ::DraftSequence.plugin_ignore_draft_sequence_callbacks[plugin] = block
-    end
   end
 
   def listen_for(event_name)

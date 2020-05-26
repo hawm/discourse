@@ -33,16 +33,16 @@ class Topic < ActiveRecord::Base
   end
 
   def self.thumbnail_sizes
-    [ self.share_thumbnail_size ]
+    [ self.share_thumbnail_size ] + DiscoursePluginRegistry.topic_thumbnail_sizes
   end
 
-  def thumbnail_job_redis_key(extra_sizes)
-    "generate_topic_thumbnail_enqueue_#{id}_#{extra_sizes.inspect}"
+  def thumbnail_job_redis_key(sizes)
+    "generate_topic_thumbnail_enqueue_#{id}_#{sizes.inspect}"
   end
 
   def filtered_topic_thumbnails(extra_sizes: [])
     return nil unless original = image_upload
-    return nil unless original.width && original.height
+    return nil unless original.read_attribute(:width) && original.read_attribute(:height)
 
     thumbnail_sizes = Topic.thumbnail_sizes + extra_sizes
     topic_thumbnails.filter { |record| thumbnail_sizes.include?([record.max_width, record.max_height]) }
@@ -50,7 +50,7 @@ class Topic < ActiveRecord::Base
 
   def thumbnail_info(enqueue_if_missing: false, extra_sizes: [])
     return nil unless original = image_upload
-    return nil unless original.width && original.height
+    return nil unless original.read_attribute(:width) && original.read_attribute(:height)
 
     infos = []
     infos << { # Always add original
@@ -79,7 +79,7 @@ class Topic < ActiveRecord::Base
     if SiteSetting.create_thumbnails &&
        enqueue_if_missing &&
        records.length < thumbnail_sizes.length &&
-       Discourse.redis.set(thumbnail_job_redis_key(extra_sizes), 1, nx: true, ex: 1.minute)
+       Discourse.redis.set(thumbnail_job_redis_key(thumbnail_sizes), 1, nx: true, ex: 1.minute)
 
       Jobs.enqueue(:generate_topic_thumbnails, { topic_id: id, extra_sizes: extra_sizes })
     end
@@ -1474,6 +1474,13 @@ class Topic < ActiveRecord::Base
     private_topic = TopicConverter.new(self, user).convert_to_private_message
     add_small_action(user, "private_topic") if private_topic
     private_topic
+  end
+
+  def update_excerpt(excerpt)
+    update_column(:excerpt, excerpt)
+    if archetype == "banner"
+      ApplicationController.banner_json_cache.clear
+    end
   end
 
   def pm_with_non_human_user?

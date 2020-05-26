@@ -1,6 +1,5 @@
 import I18n from "I18n";
 import DropdownSelectBoxComponent from "select-kit/components/dropdown-select-box";
-import { iconHTML } from "discourse-common/lib/icon-library";
 import { computed, action } from "@ember/object";
 
 const UNPINNED = "unpinned";
@@ -10,6 +9,10 @@ export default DropdownSelectBoxComponent.extend({
   pluginApiIdentifiers: ["pinned-options"],
   classNames: ["pinned-options"],
 
+  selectKitOptions: {
+    showCaret: true
+  },
+
   modifySelection(content) {
     const pinnedGlobally = this.get("topic.pinned_globally");
     const pinned = this.value;
@@ -17,7 +20,7 @@ export default DropdownSelectBoxComponent.extend({
     const state = pinned ? `pinned${globally}` : UNPINNED;
     const title = I18n.t(`topic_statuses.${state}.title`);
 
-    content.label = `<span>${title}</span>${iconHTML("caret-down")}`.htmlSafe();
+    content.label = `<span>${title}</span>`.htmlSafe();
     content.title = title;
     content.name = state;
     content.icon = `thumbtack${state === UNPINNED ? " unpinned" : ""}`;

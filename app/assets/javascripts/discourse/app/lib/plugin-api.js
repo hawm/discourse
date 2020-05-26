@@ -40,6 +40,7 @@ import { replaceFormatter } from "discourse/lib/utilities";
 import { modifySelectKit } from "select-kit/mixins/plugin-api";
 import { addGTMPageChangedCallback } from "discourse/lib/page-tracker";
 import { registerCustomAvatarHelper } from "discourse/helpers/user-avatar";
+import { addUsernameSelectorDecorator } from "discourse/helpers/decorate-username-selector";
 import { disableNameSuppression } from "discourse/widgets/poster-name";
 import { registerCustomPostMessageCallback as registerCustomPostMessageCallback1 } from "discourse/controllers/topic";
 import Sharing from "discourse/lib/sharing";
@@ -55,7 +56,7 @@ import { on } from "@ember/object/evented";
 import KeyboardShortcuts from "discourse/lib/keyboard-shortcuts";
 
 // If you add any methods to the API ensure you bump up this number
-const PLUGIN_API_VERSION = "0.10.0";
+const PLUGIN_API_VERSION = "0.10.1";
 
 class PluginApi {
   constructor(version, container) {
@@ -925,6 +926,19 @@ class PluginApi {
    */
   addComposerUploadMarkdownResolver(resolver) {
     addComposerUploadMarkdownResolver(resolver);
+  }
+
+  /**
+   * Registers a function to decorate each autocomplete usernames.
+   *
+   * Example:
+   *
+   * api.addUsernameSelectorDecorator(username => {
+   *   return `<span class="status">[is_away]</class>`;
+   * })
+   */
+  addUsernameSelectorDecorator(decorator) {
+    addUsernameSelectorDecorator(decorator);
   }
 
   /**
