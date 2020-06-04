@@ -259,40 +259,44 @@ componentTest("prevents propagating click event on header", {
   }
 });
 
-componentTest("focusAfterOnChange", {
-  template:
-    "{{d-button class='focus-me'}}{{single-select options=(hash focusAfterOnChange=focusAfterOnChange) value=value content=content onChange=onChange}}",
+componentTest("labelProperty", {
+  template: '{{single-select labelProperty="foo" value=value content=content}}',
 
   beforeEach() {
     this.setProperties({
-      onChange: () => {
-        find(".focus-me").focus();
-        this.set("value", "foo");
-      },
-      content: DEFAULT_CONTENT,
-      value: DEFAULT_VALUE
+      content: [{ id: 1, name: "john", foo: "JACKSON" }],
+      value: 1
     });
   },
 
   async test(assert) {
-    this.set("focusAfterOnChange", true);
+    assert.equal(this.subject.header().label(), "JACKSON");
 
     await this.subject.expand();
-    await this.subject.selectRowByIndex(0);
 
-    assert.ok(
-      document.activeElement.classList.contains("single-select-header"),
-      "it selects the header"
-    );
+    const row = this.subject.rowByValue(1);
 
-    this.set("focusAfterOnChange", false);
+    assert.equal(row.label(), "JACKSON");
+  }
+});
+
+componentTest("titleProperty", {
+  template: '{{single-select titleProperty="foo" value=value content=content}}',
+
+  beforeEach() {
+    this.setProperties({
+      content: [{ id: 1, name: "john", foo: "JACKSON" }],
+      value: 1
+    });
+  },
+
+  async test(assert) {
+    assert.equal(this.subject.header().title(), "JACKSON");
 
     await this.subject.expand();
-    await this.subject.selectRowByIndex(0);
 
-    assert.notOk(
-      document.activeElement.classList.contains("single-select-header"),
-      "it doesn’t select the header"
-    );
+    const row = this.subject.rowByValue(1);
+
+    assert.equal(row.title(), "JACKSON");
   }
 });

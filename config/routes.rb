@@ -14,6 +14,8 @@ Discourse::Application.routes.draw do
   match "/404", to: "exceptions#not_found", via: [:get, :post]
   get "/404-body" => "exceptions#not_found_body"
 
+  get "/bootstrap" => "bootstrap#index"
+
   post "webhooks/aws" => "webhooks#aws"
   post "webhooks/mailgun"  => "webhooks#mailgun"
   post "webhooks/mailjet"  => "webhooks#mailjet"
@@ -684,6 +686,7 @@ Discourse::Application.routes.draw do
       get "/l/#{filter}" => "list#category_#{filter}", as: "category_#{filter}"
     end
 
+    get "/all" => "list#category_default", as: "category_all", constraints: { format: 'html' }
     get "/" => "list#category_default", as: "category_default"
   end
 

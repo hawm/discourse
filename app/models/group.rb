@@ -91,6 +91,8 @@ class Group < ActiveRecord::Base
     everyone: 99
   }
 
+  VALID_DOMAIN_REGEX = /\A[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,24}(:[0-9]{1,5})?(\/.*)?\Z/i
+
   def self.visibility_levels
     @visibility_levels = Enum.new(
       public: 0,
@@ -614,16 +616,15 @@ class Group < ActiveRecord::Base
   PUBLISH_CATEGORIES_LIMIT = 10
 
   def add(user, notify: false, automatic: false)
-    self.users.push(user) unless self.users.include?(user)
+    return self if self.users.include?(user)
+
+    self.users.push(user)
 
     if notify
       Notification.create!(
         notification_type: Notification.types[:membership_request_accepted],
         user_id: user.id,
-        data: {
-          group_id: id,
-          group_name: name
-        }.to_json
+        data: { group_id: id, group_name: name }.to_json
       )
     end
 
@@ -777,7 +778,7 @@ class Group < ActiveRecord::Base
     return if self.automatic_membership_email_domains.blank?
 
     domains = Group.get_valid_email_domains(self.automatic_membership_email_domains) do |domain|
-      self.errors.add :base, (I18n.t('groups.errors.invalid_domain', domain: domain)) unless domain =~ /\A[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,24}(:[0-9]{1,5})?(\/.*)?\Z/i
+      self.errors.add :base, (I18n.t('groups.errors.invalid_domain', domain: domain))
     end
 
     self.automatic_membership_email_domains = domains.join("|")
@@ -862,10 +863,10 @@ class Group < ActiveRecord::Base
       domain.sub!(/^https?:\/\//, '')
       domain.sub!(/\/.*$/, '')
 
-      if domain =~ /\A[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,24}(:[0-9]{1,5})?(\/.*)?\Z/i
+      if domain =~ Group::VALID_DOMAIN_REGEX
         valid_domains << domain
       else
-        yield domain
+        yield domain if block_given?
       end
     end
 
@@ -922,7 +923,6 @@ end
 #  grant_trust_level                  :integer
 #  incoming_email                     :string
 #  has_messages                       :boolean          default(FALSE), not null
-#  flair_url                          :string
 #  flair_bg_color                     :string
 #  flair_color                        :string
 #  bio_raw                            :text
@@ -933,11 +933,13 @@ end
 #  visibility_level                   :integer          default(0), not null
 #  public_exit                        :boolean          default(FALSE), not null
 #  public_admission                   :boolean          default(FALSE), not null
-#  publish_read_state                 :boolean          default(FALSE), not null
 #  membership_request_template        :text
 #  messageable_level                  :integer          default(0)
 #  mentionable_level                  :integer          default(0)
+#  publish_read_state                 :boolean          default(FALSE), not null
 #  members_visibility_level           :integer          default(0), not null
+#  flair_icon                         :string
+#  flair_upload_id                    :integer
 #
 # Indexes
 #
