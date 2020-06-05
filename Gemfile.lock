@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/discourse/rails_failover
-  revision: e9893a3920809c9a1bca4f7ae07b7243b2cd127e
+  revision: 850d04f4b1c4178862d9674ec0b2a46a2f1c20d9
   specs:
     rails_failover (0.4.0)
       activerecord (~> 6.0)
@@ -155,7 +155,7 @@ GEM
     hkdf (0.3.0)
     htmlentities (4.3.4)
     http_accept_language (2.1.1)
-    i18n (1.8.2)
+    i18n (1.8.3)
       concurrent-ruby (~> 1.0)
     image_size (1.5.0)
     in_threads (1.5.4)
@@ -267,6 +267,9 @@ GEM
     pry (0.13.1)
       coderay (~> 1.1)
       method_source (~> 1.0)
+    pry-byebug (3.9.0)
+      byebug (~> 11.0)
+      pry (~> 0.13.0)
     pry-rails (0.3.9)
       pry (>= 0.10.4)
     public_suffix (4.0.5)
@@ -516,6 +519,7 @@ DEPENDENCIES
   onebox
   parallel_tests
   pg
+  pry-byebug
   pry-rails
   puma
   r2
