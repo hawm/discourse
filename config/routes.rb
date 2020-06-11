@@ -315,8 +315,6 @@ Discourse::Application.routes.draw do
 
     end # admin namespace
 
-    get "email_preferences" => "email#preferences_redirect", :as => "email_preferences_redirect"
-
     get "email/unsubscribe/:key" => "email#unsubscribe", as: "email_unsubscribe"
     get "email/unsubscribed" => "email#unsubscribed", as: "email_unsubscribed"
     post "email/unsubscribe/:key" => "email#perform_unsubscribe", as: "email_perform_unsubscribe"
@@ -374,7 +372,6 @@ Discourse::Application.routes.draw do
     end
 
     get "my/*path", to: 'users#my_redirect'
-    get "user_preferences" => "users#user_preferences_redirect"
     get ".well-known/change-password", to: redirect(relative_url_root + 'my/preferences/account', status: 302)
 
     get "user-cards" => "users#cards", format: :json
@@ -442,17 +439,20 @@ Discourse::Application.routes.draw do
       get({ "#{root_path}/:username" => "users#show", constraints: { username: RouteFormat.username } }.merge(index == 1 ? { as: 'user' } : {}))
       put "#{root_path}/:username" => "users#update", constraints: { username: RouteFormat.username }, defaults: { format: :json }
       get "#{root_path}/:username/emails" => "users#check_emails", constraints: { username: RouteFormat.username }
-      get({ "#{root_path}/:username/preferences" => "users#preferences", constraints: { username: RouteFormat.username } }.merge(index == 1 ? { as: :email_preferences } : {}))
+      get "#{root_path}/:username/preferences" => "users#preferences", constraints: { username: RouteFormat.username }
       get "#{root_path}/:username/preferences/email" => "users_email#index", constraints: { username: RouteFormat.username }
       get "#{root_path}/:username/preferences/account" => "users#preferences", constraints: { username: RouteFormat.username }
       get "#{root_path}/:username/preferences/profile" => "users#preferences", constraints: { username: RouteFormat.username }
       get "#{root_path}/:username/preferences/emails" => "users#preferences", constraints: { username: RouteFormat.username }
+      put "#{root_path}/:username/preferences/primary-email" => "users#update_primary_email", format: :json, constraints: { username: RouteFormat.username }
+      delete "#{root_path}/:username/preferences/email" => "users#destroy_email", constraints: { username: RouteFormat.username }
       get "#{root_path}/:username/preferences/notifications" => "users#preferences", constraints: { username: RouteFormat.username }
       get "#{root_path}/:username/preferences/categories" => "users#preferences", constraints: { username: RouteFormat.username }
       get "#{root_path}/:username/preferences/users" => "users#preferences", constraints: { username: RouteFormat.username }
       get "#{root_path}/:username/preferences/tags" => "users#preferences", constraints: { username: RouteFormat.username }
       get "#{root_path}/:username/preferences/interface" => "users#preferences", constraints: { username: RouteFormat.username }
       get "#{root_path}/:username/preferences/apps" => "users#preferences", constraints: { username: RouteFormat.username }
+      post "#{root_path}/:username/preferences/email" => "users_email#create", constraints: { username: RouteFormat.username }
       put "#{root_path}/:username/preferences/email" => "users_email#update", constraints: { username: RouteFormat.username }
       get "#{root_path}/:username/preferences/badge_title" => "users#preferences", constraints: { username: RouteFormat.username }
       put "#{root_path}/:username/preferences/badge_title" => "users#badge_title", constraints: { username: RouteFormat.username }
@@ -471,6 +471,7 @@ Discourse::Application.routes.draw do
       get "#{root_path}/:username/invited" => "users#invited", constraints: { username: RouteFormat.username }
       get "#{root_path}/:username/invited_count" => "users#invited_count", constraints: { username: RouteFormat.username }
       get "#{root_path}/:username/invited/:filter" => "users#invited", constraints: { username: RouteFormat.username }
+      get "#{root_path}/:username/invite_links" => "users#invite_links", constraints: { username: RouteFormat.username }
       post "#{root_path}/action/send_activation_email" => "users#send_activation_email"
       get "#{root_path}/:username/summary" => "users#show", constraints: { username: RouteFormat.username }
       get "#{root_path}/:username/activity/topics.rss" => "list#user_topics_feed", format: :rss, constraints: { username: RouteFormat.username }

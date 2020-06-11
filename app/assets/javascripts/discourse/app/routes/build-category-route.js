@@ -136,7 +136,7 @@ export default (filterArg, params) => {
       const listFilter = `c/${Category.slugFor(category)}/${
           category.id
         }/l/${this.filter(category)}`,
-        findOpts = filterQueryParams(modelParams),
+        findOpts = filterQueryParams(modelParams, params),
         extras = { cached: this.isPoppedState(transition) };
 
       return findTopicList(
@@ -177,7 +177,7 @@ export default (filterArg, params) => {
         category = model.category,
         canCreateTopic = topics.get("can_create_topic"),
         canCreateTopicOnCategory =
-          category.get("permission") === PermissionType.FULL,
+          canCreateTopic && category.get("permission") === PermissionType.FULL,
         filter = this.filter(category);
 
       this.controllerFor("navigation/category").setProperties({
