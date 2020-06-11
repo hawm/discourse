@@ -92,7 +92,7 @@ docker run -d \
     $ENV_ARGS \
     --hostname=discourse \
     --name=discourse_dev \
-    --restart=no \
+    #--restart=always \
     discourse/discourse_dev:release /sbin/boot
 
 if [ "${initialize}" = "initialize" ]; then
