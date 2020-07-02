@@ -428,19 +428,21 @@ module Discourse
     alias_method :base_url_no_path, :base_url_no_prefix
   end
 
-  READONLY_MODE_KEY_TTL  ||= 60
-  READONLY_MODE_KEY      ||= 'readonly_mode'
-  PG_READONLY_MODE_KEY   ||= 'readonly_mode:postgres'
-  USER_READONLY_MODE_KEY ||= 'readonly_mode:user'
+  READONLY_MODE_KEY_TTL      ||= 60
+  READONLY_MODE_KEY          ||= 'readonly_mode'
+  PG_READONLY_MODE_KEY       ||= 'readonly_mode:postgres'
+  USER_READONLY_MODE_KEY     ||= 'readonly_mode:user'
+  PG_FORCE_READONLY_MODE_KEY ||= 'readonly_mode:postgres_force'
 
   READONLY_KEYS ||= [
     READONLY_MODE_KEY,
     PG_READONLY_MODE_KEY,
-    USER_READONLY_MODE_KEY
+    USER_READONLY_MODE_KEY,
+    PG_FORCE_READONLY_MODE_KEY
   ]
 
   def self.enable_readonly_mode(key = READONLY_MODE_KEY)
-    if key == USER_READONLY_MODE_KEY
+    if key == USER_READONLY_MODE_KEY || key == PG_FORCE_READONLY_MODE_KEY
       Discourse.redis.set(key, 1)
     else
       Discourse.redis.setex(key, READONLY_MODE_KEY_TTL, 1)
@@ -486,8 +488,26 @@ module Discourse
     true
   end
 
+  def self.enable_pg_force_readonly_mode
+    RailsMultisite::ConnectionManagement.each_connection do
+      enable_readonly_mode(PG_FORCE_READONLY_MODE_KEY)
+      Sidekiq.pause!("pg_failover") if !Sidekiq.paused?
+    end
+
+    true
+  end
+
+  def self.disable_pg_force_readonly_mode
+    RailsMultisite::ConnectionManagement.each_connection do
+      disable_readonly_mode(PG_FORCE_READONLY_MODE_KEY)
+      Sidekiq.unpause!
+    end
+
+    true
+  end
+
   def self.readonly_mode?(keys = READONLY_KEYS)
-    recently_readonly? || Discourse.redis.exists(*keys)
+    recently_readonly? || Discourse.redis.exists?(*keys)
   end
 
   def self.pg_readonly_mode?

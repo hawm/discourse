@@ -890,12 +890,9 @@ describe Guardian do
           expect(Guardian.new(moderator).can_see?(post_revision)).to be_truthy
         end
 
-        it 'is true for trust level 4' do
-          expect(Guardian.new(trust_level_4).can_see?(post_revision)).to be_truthy
-        end
-
-        it 'is false for trust level lower than 4' do
+        it 'is false for trust level equal or lower than 4' do
           expect(Guardian.new(trust_level_3).can_see?(post_revision)).to be_falsey
+          expect(Guardian.new(trust_level_4).can_see?(post_revision)).to be_falsey
         end
       end
     end
@@ -3504,6 +3501,21 @@ describe Guardian do
           expect(Guardian.new(user).can_remove_allowed_users?(topic, moderator))
             .to eq(false)
         end
+      end
+    end
+
+    context "anonymous users" do
+      fab!(:topic) { Fabricate(:topic) }
+
+      it 'should be false' do
+        expect(Guardian.new.can_remove_allowed_users?(topic)).to eq(false)
+      end
+
+      it 'should be false when the topic does not have a user (for example because the user was removed)' do
+        DB.exec("UPDATE topics SET user_id=NULL WHERE id=#{topic.id}")
+        topic.reload
+
+        expect(Guardian.new.can_remove_allowed_users?(topic)).to eq(false)
       end
     end
   end

@@ -52,7 +52,9 @@ class ListController < ApplicationController
       list_opts = build_topic_list_options
       list_opts.merge!(options) if options
       user = list_target_user
-      list_opts[:no_definitions] = true if params[:category].blank? && filter == :latest
+      if params[:category].blank? && filter == :latest && !SiteSetting.show_category_definitions_in_topic_lists
+        list_opts[:no_definitions] = true
+      end
 
       list = TopicQuery.new(user, list_opts).public_send("list_#{filter}")
 
@@ -144,6 +146,10 @@ class ListController < ApplicationController
 
   def self.generate_message_route(action)
     define_method("#{action}") do
+      if action == :private_messages_tag && !guardian.can_tag_pms?
+        raise Discourse::NotFound
+      end
+
       list_opts = build_topic_list_options
       target_user = fetch_user_from_params({ include_inactive: current_user.try(:staff?) }, [:user_stat, :user_option])
       guardian.ensure_can_see_private_messages!(target_user.id)
