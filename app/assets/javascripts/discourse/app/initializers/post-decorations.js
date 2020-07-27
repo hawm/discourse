@@ -9,9 +9,21 @@ export default {
   initialize(container) {
     withPluginApi("0.1", api => {
       const siteSettings = container.lookup("site-settings:main");
-      api.decorateCooked(highlightSyntax, {
-        id: "discourse-syntax-highlighting"
-      });
+      api.decorateCooked(
+        elem => {
+          return highlightSyntax(elem, siteSettings);
+        },
+        {
+          id: "discourse-syntax-highlighting"
+        }
+      );
+
+      api.decorateCookedElement(
+        elem => {
+          return lightbox(elem, siteSettings);
+        },
+        { id: "discourse-lightbox" }
+      );
       api.decorateCookedElement(lightbox, { id: "discourse-lightbox" });
       if (siteSettings.support_mixed_text_direction) {
         api.decorateCooked(setTextDirections, {
@@ -38,6 +50,23 @@ export default {
         },
         { id: "discourse-audio" }
       );
+
+      const caps = container.lookup("capabilities:main");
+      if (caps.isSafari || caps.isIOS) {
+        api.decorateCookedElement(
+          elem => {
+            const video = elem.querySelector("video");
+            if (video && !video.poster) {
+              const source = video.querySelector("source");
+              if (source) {
+                // this tricks Safari into loading the video preview
+                source.parentElement.load();
+              }
+            }
+          },
+          { id: "safari-video-poster", afterAdopt: true, onlyStream: true }
+        );
+      }
     });
   }
 };

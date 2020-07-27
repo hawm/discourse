@@ -655,7 +655,7 @@ RSpec.describe TopicsController do
       expect(response.status).to eq(403)
     end
 
-    describe 'when logged in' do
+    describe 'when logged in as a moderator' do
       let(:topic) { Fabricate(:topic) }
       before do
         sign_in(moderator)
@@ -679,7 +679,7 @@ RSpec.describe TopicsController do
         expect(response.status).to eq(400)
       end
 
-      it 'raises an error with a status not in the whitelist' do
+      it 'raises an error with a status not in the allowlist' do
         put "/t/#{topic.id}/status.json", params: {
           status: 'title', enabled: 'true'
         }
@@ -702,6 +702,48 @@ RSpec.describe TopicsController do
 
         expect(body['topic_status_update']).to eq(nil)
       end
+    end
+
+    describe 'when logged in as a group member with reviewable status' do
+      fab!(:group_user) { Fabricate(:group_user) }
+      fab!(:category) { Fabricate(:category, reviewable_by_group: group_user.group) }
+      fab!(:topic) { Fabricate(:topic, category: category) }
+
+      let(:user) { group_user.user }
+      let(:group) { group_user.group }
+
+      before do
+        sign_in(user)
+        SiteSetting.enable_category_group_moderation = true
+      end
+
+      it 'should allow a group moderator to close a topic' do
+        put "/t/#{topic.id}/status.json", params: {
+          status: 'closed', enabled: 'true'
+        }
+
+        expect(response.status).to eq(200)
+        expect(topic.reload.closed).to eq(true)
+      end
+
+      it 'should allow a group moderator to archive a topic' do
+        put "/t/#{topic.id}/status.json", params: {
+          status: 'archived', enabled: 'true'
+        }
+
+        expect(response.status).to eq(200)
+        expect(topic.reload.archived).to eq(true)
+      end
+
+      it 'should not allow a group moderator to pin a topic' do
+        put "/t/#{topic.id}/status.json", params: {
+          status: 'pinned', enabled: 'true'
+        }
+
+        expect(response.status).to eq(403)
+        expect(topic.reload.pinned_at).to eq(nil)
+      end
+
     end
   end
 
@@ -1948,94 +1990,6 @@ RSpec.describe TopicsController do
         expect(response.status).to eq(200)
         notification.reload
         expect(notification.read).to eq(true)
-      end
-    end
-
-    describe "set_locale" do
-      def headers(locale)
-        { HTTP_ACCEPT_LANGUAGE: locale }
-      end
-
-      context "allow_user_locale disabled" do
-        context "accept-language header differs from default locale" do
-          before do
-            SiteSetting.allow_user_locale = false
-            SiteSetting.default_locale = "en"
-          end
-
-          context "with an anonymous user" do
-            it "uses the default locale" do
-              get "/t/#{topic.id}.json", headers: headers("fr")
-
-              expect(response.status).to eq(200)
-              expect(I18n.locale).to eq(:en)
-            end
-          end
-
-          context "with a logged in user" do
-            it "it uses the default locale" do
-              user = Fabricate(:user, locale: :fr)
-              sign_in(user)
-
-              get "/t/#{topic.id}.json", headers: headers("fr")
-
-              expect(response.status).to eq(200)
-              expect(I18n.locale).to eq(:en)
-            end
-          end
-        end
-      end
-
-      context "set_locale_from_accept_language_header enabled" do
-        context "accept-language header differs from default locale" do
-          before do
-            SiteSetting.allow_user_locale = true
-            SiteSetting.set_locale_from_accept_language_header = true
-            SiteSetting.default_locale = "en"
-          end
-
-          context "with an anonymous user" do
-            it "uses the locale from the headers" do
-              get "/t/#{topic.id}.json", headers: headers("fr")
-              expect(response.status).to eq(200)
-              expect(I18n.locale).to eq(:fr)
-            end
-          end
-
-          context "with a logged in user" do
-            it "uses the user's preferred locale" do
-              user = Fabricate(:user, locale: :fr)
-              sign_in(user)
-
-              get "/t/#{topic.id}.json", headers: headers("fr")
-              expect(response.status).to eq(200)
-              expect(I18n.locale).to eq(:fr)
-            end
-          end
-        end
-
-        context "the preferred locale includes a region" do
-          it "returns the locale and region separated by an underscore" do
-            SiteSetting.allow_user_locale = true
-            SiteSetting.set_locale_from_accept_language_header = true
-            SiteSetting.default_locale = "en"
-
-            get "/t/#{topic.id}.json", headers: headers("zh-CN")
-            expect(response.status).to eq(200)
-            expect(I18n.locale).to eq(:zh_CN)
-          end
-        end
-
-        context 'accept-language header is not set' do
-          it 'uses the site default locale' do
-            SiteSetting.allow_user_locale = true
-            SiteSetting.default_locale = 'en'
-
-            get "/t/#{topic.id}.json", headers: headers("")
-            expect(response.status).to eq(200)
-            expect(I18n.locale).to eq(:en)
-          end
-        end
       end
     end
 

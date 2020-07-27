@@ -47,8 +47,6 @@ class Category < ActiveRecord::Base
 
   has_and_belongs_to_many :web_hooks
 
-  has_one :category_search_data, dependent: :delete
-
   validates :user_id, presence: true
 
   validates :name, if: Proc.new { |c| c.new_record? || c.will_save_change_to_name? },
@@ -766,11 +764,15 @@ class Category < ActiveRecord::Base
   end
 
   def index_search
+    if saved_change_to_attribute?(:name)
+      SearchIndexer.queue_category_posts_reindex(self.id)
+    end
+
     SearchIndexer.index(self)
   end
 
   def update_reviewables
-    if SiteSetting.enable_category_group_review? && saved_change_to_reviewable_by_group_id?
+    if SiteSetting.enable_category_group_moderation? && saved_change_to_reviewable_by_group_id?
       Reviewable.where(category_id: id).update_all(reviewable_by_group_id: reviewable_by_group_id)
     end
   end

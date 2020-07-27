@@ -1,6 +1,6 @@
 import I18n from "I18n";
 import discourseComputed from "discourse-common/utils/decorators";
-import EmberObject, { computed, get } from "@ember/object";
+import EmberObject, { get } from "@ember/object";
 import { isEmpty } from "@ember/utils";
 import { equal, and, or, not } from "@ember/object/computed";
 import { ajax } from "discourse/lib/ajax";
@@ -18,18 +18,6 @@ import User from "discourse/models/user";
 import showModal from "discourse/lib/show-modal";
 
 const Post = RestModel.extend({
-  // TODO: Remove this once one instantiate all `Discourse.Post` models via the store.
-  siteSettings: computed({
-    get() {
-      return Discourse.SiteSettings;
-    },
-
-    // prevents model created from json to overridde this property
-    set() {
-      return Discourse.SiteSettings;
-    }
-  }),
-
   @discourseComputed("url")
   shareUrl(url) {
     const user = User.current();
@@ -52,9 +40,7 @@ const Post = RestModel.extend({
 
   @discourseComputed("name", "username")
   showName(name, username) {
-    return (
-      name && name !== username && Discourse.SiteSettings.display_name_on_posts
-    );
+    return name && name !== username && this.siteSettings.display_name_on_posts;
   },
 
   @discourseComputed("firstPost", "deleted_by", "topic.deleted_by")
@@ -202,10 +188,7 @@ const Post = RestModel.extend({
     this.set("oldCooked", this.cooked);
 
     // Moderators can delete posts. Users can only trigger a deleted at message, unless delete_removed_posts_after is 0.
-    if (
-      deletedBy.staff ||
-      Discourse.SiteSettings.delete_removed_posts_after === 0
-    ) {
+    if (deletedBy.staff || this.siteSettings.delete_removed_posts_after === 0) {
       this.setProperties({
         deleted_at: new Date(),
         deleted_by: deletedBy,
@@ -219,7 +202,7 @@ const Post = RestModel.extend({
           : "post.deleted_by_author";
       promise = cookAsync(
         I18n.t(key, {
-          count: Discourse.SiteSettings.delete_removed_posts_after
+          count: this.siteSettings.delete_removed_posts_after
         })
       ).then(cooked => {
         this.setProperties({
@@ -317,7 +300,7 @@ const Post = RestModel.extend({
           postId: this.id,
           id: this.bookmark_id,
           reminderAt: this.bookmark_reminder_at,
-          deleteWhenReminderSent: this.bookmark_delete_when_reminder_sent,
+          autoDeletePreference: this.bookmark_auto_delete_preference,
           name: this.bookmark_name
         },
         title: this.bookmark_id
@@ -336,8 +319,7 @@ const Post = RestModel.extend({
             bookmarked: true,
             bookmark_reminder_at: savedData.reminderAt,
             bookmark_reminder_type: savedData.reminderType,
-            bookmark_delete_when_reminder_sent:
-              savedData.deleteWhenReminderSent,
+            bookmark_auto_delete_preference: savedData.autoDeletePreference,
             bookmark_name: savedData.name,
             bookmark_id: savedData.id
           });
@@ -346,16 +328,21 @@ const Post = RestModel.extend({
         },
         afterDelete: topicBookmarked => {
           this.set("topic.bookmarked", topicBookmarked);
-          this.setProperties({
-            bookmark_reminder_at: null,
-            bookmark_reminder_type: null,
-            bookmark_name: null,
-            bookmark_id: null,
-            bookmarked: false
-          });
+          this.clearBookmark();
           this.appEvents.trigger("page:bookmark-post-toggled", this);
         }
       });
+    });
+  },
+
+  clearBookmark() {
+    this.setProperties({
+      bookmark_reminder_at: null,
+      bookmark_reminder_type: null,
+      bookmark_name: null,
+      bookmark_id: null,
+      bookmarked: false,
+      bookmark_auto_delete_preference: null
     });
   },
 

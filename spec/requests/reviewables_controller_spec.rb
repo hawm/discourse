@@ -196,7 +196,7 @@ describe ReviewablesController do
       context "with user custom field" do
         before do
           plugin = Plugin::Instance.new
-          plugin.whitelist_public_user_custom_field :public_field
+          plugin.allow_public_user_custom_field :public_field
         end
 
         after do
@@ -590,7 +590,7 @@ describe ReviewablesController do
     end
 
     context "#destroy" do
-      fab!(:user) { Fabricate(:admin) }
+      fab!(:user) { Fabricate(:user) }
 
       before do
         sign_in(user)

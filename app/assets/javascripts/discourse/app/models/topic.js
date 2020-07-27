@@ -124,7 +124,7 @@ const Topic = RestModel.extend({
       Site.currentProp("censored_regexp")
     );
 
-    if (Discourse.SiteSettings.support_mixed_text_direction) {
+    if (this.siteSettings.support_mixed_text_direction) {
       const titleDir = isRTL(title) ? "rtl" : "ltr";
       return `<span dir="${titleDir}">${fancyTitle}</span>`;
     }
@@ -171,7 +171,7 @@ const Topic = RestModel.extend({
 
   @discourseComputed("tags")
   visibleListTags(tags) {
-    if (!tags || !Discourse.SiteSettings.suppress_overlapping_tags_in_list) {
+    if (!tags || !this.siteSettings.suppress_overlapping_tags_in_list) {
       return tags;
     }
 
@@ -338,13 +338,13 @@ const Topic = RestModel.extend({
 
   @discourseComputed("views")
   viewsHeat(v) {
-    if (v >= Discourse.SiteSettings.topic_views_heat_high) {
+    if (v >= this.siteSettings.topic_views_heat_high) {
       return "heatmap-high";
     }
-    if (v >= Discourse.SiteSettings.topic_views_heat_medium) {
+    if (v >= this.siteSettings.topic_views_heat_medium) {
       return "heatmap-med";
     }
-    if (v >= Discourse.SiteSettings.topic_views_heat_low) {
+    if (v >= this.siteSettings.topic_views_heat_low) {
       return "heatmap-low";
     }
     return null;
@@ -493,17 +493,17 @@ const Topic = RestModel.extend({
     });
   },
 
-  createInvite(user, group_names, custom_message) {
+  createInvite(user, group_ids, custom_message) {
     return ajax(`/t/${this.id}/invite`, {
       type: "POST",
-      data: { user, group_names, custom_message }
+      data: { user, group_ids, custom_message }
     });
   },
 
-  generateInviteLink(email, groupNames, topicId) {
+  generateInviteLink(email, group_ids, topic_id) {
     return ajax("/invites/link", {
       type: "POST",
-      data: { email, group_names: groupNames, topic_id: topicId }
+      data: { email, group_ids, topic_id }
     });
   },
 
@@ -554,6 +554,7 @@ const Topic = RestModel.extend({
       }
     }
     keys.forEach(key => this.set(key, json[key]));
+    return this;
   },
 
   reload() {

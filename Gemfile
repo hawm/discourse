@@ -19,13 +19,13 @@ else
   # this allows us to include the bits of rails we use without pieces we do not.
   #
   # To issue a rails update bump the version number here
-  gem 'actionmailer', '6.0.3.1'
-  gem 'actionpack', '6.0.3.1'
-  gem 'actionview', '6.0.3.1'
-  gem 'activemodel', '6.0.3.1'
-  gem 'activerecord', '6.0.3.1'
-  gem 'activesupport', '6.0.3.1'
-  gem 'railties', '6.0.3.1'
+  gem 'actionmailer', '6.0.3.2'
+  gem 'actionpack', '6.0.3.2'
+  gem 'actionview', '6.0.3.2'
+  gem 'activemodel', '6.0.3.2'
+  gem 'activerecord', '6.0.3.2'
+  gem 'activesupport', '6.0.3.2'
+  gem 'railties', '6.0.3.2'
   gem 'sprockets-rails'
 end
 
@@ -129,7 +129,7 @@ gem 'mini_racer'
 # TODO: determine why highline is being held back and upgrade to latest
 gem 'highline', '~> 1.7.0', require: false
 
-gem 'rack', '2.2.2'
+gem 'rack'
 
 gem 'rack-protection' # security
 gem 'cbor', require: false
@@ -225,7 +225,9 @@ gem 'logster'
 gem 'sassc', '2.0.1', require: false
 gem "sassc-rails"
 
-gem 'rotp', require: false
+# see: https://github.com/mdp/rotp/issues/98
+gem 'rotp', '5.1.0' , require: false
+
 gem 'rqrcode'
 
 gem 'rubyzip', require: false

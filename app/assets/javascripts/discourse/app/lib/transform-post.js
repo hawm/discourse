@@ -119,7 +119,10 @@ export default function transformPost(
   postAtts.canManage = currentUser && currentUser.get("canManageTopic");
   postAtts.canViewRawEmail =
     currentUser && (currentUser.id === post.user_id || currentUser.staff);
-  postAtts.canReplyAsNewTopic = details.can_reply_as_new_topic;
+  postAtts.canArchiveTopic = !!details.can_archive_topic;
+  postAtts.canCloseTopic = !!details.can_close_topic;
+  postAtts.canEditStaffNotes = !!details.can_edit_staff_notes;
+  postAtts.canReplyAsNewTopic = !!details.can_reply_as_new_topic;
   postAtts.canReviewTopic = !!details.can_review_topic;
   postAtts.canPublishPage =
     !!details.can_publish_page && post.post_number === 1;
@@ -172,9 +175,11 @@ export default function transformPost(
     postAtts.createdByName = createdBy.name;
 
     postAtts.lastPostUrl = topic.get("lastPostUrl");
-    postAtts.lastPostUsername = details.last_poster.username;
-    postAtts.lastPostAvatarTemplate = details.last_poster.avatar_template;
-    postAtts.lastPostName = details.last_poster.name;
+    if (details.last_poster) {
+      postAtts.lastPostUsername = details.last_poster.username;
+      postAtts.lastPostAvatarTemplate = details.last_poster.avatar_template;
+      postAtts.lastPostName = details.last_poster.name;
+    }
     postAtts.lastPostAt = topic.last_posted_at;
 
     postAtts.topicReplyCount = topic.get("replyCount");

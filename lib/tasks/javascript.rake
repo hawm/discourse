@@ -1,7 +1,11 @@
 # frozen_string_literal: true
 
+def public_root
+  "#{Rails.root}/public"
+end
+
 def public_js
-  "#{Rails.root}/public/javascripts"
+  "#{public_root}/javascripts"
 end
 
 def vendor_js
@@ -153,7 +157,17 @@ task 'javascript:update' do
       public: true
     }, {
       source: '@popperjs/core/dist/umd/popper.js'
-    }
+    }, {
+      source: '@popperjs/core/dist/umd/popper.js.map',
+      public_root: true
+    },
+    {
+      source: 'route-recognizer/dist/route-recognizer.js'
+    }, {
+      source: 'route-recognizer/dist/route-recognizer.js.map',
+      public_root: true
+    },
+
   ]
 
   start = Time.now
@@ -179,7 +193,9 @@ task 'javascript:update' do
       system("rm -rf node_modules/highlight.js/build/styles")
 
       langs_dir = 'vendor/assets/javascripts/highlightjs/languages/*.min.js'
-      langs = Dir.glob(langs_dir).map { |lang| File.basename(lang).split('.')[0] }
+
+      # We don't need every language for tests
+      langs = ['javascript', 'sql', 'ruby']
       test_bundle_dest = 'vendor/assets/javascripts/highlightjs/highlight-test-bundle.min.js'
       File.write(test_bundle_dest, HighlightJs.bundle(langs))
     end
@@ -189,7 +205,9 @@ task 'javascript:update' do
       system("rm -rf node_modules/ace-builds/src-min-noconflict/snippets")
     end
 
-    if f[:public]
+    if f[:public_root]
+      dest = "#{public_root}/#{filename}"
+    elsif f[:public]
       dest = "#{public_js}/#{filename}"
     else
       dest = "#{vendor_js}/#{filename}"

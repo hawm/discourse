@@ -412,16 +412,25 @@ class GroupsController < ApplicationController
       end
     end
 
+    removed_users = []
+    skipped_users = []
+
     users.each do |user|
       if group.remove(user)
+        removed_users << user.username
         GroupActionLogger.new(current_user, group).log_remove_user_from_group(user)
       else
-        raise Discourse::InvalidParameters
+        if group.users.exclude? user
+          skipped_users << user.username
+        else
+          raise Discourse::InvalidParameters
+        end
       end
     end
 
     render json: success_json.merge!(
-      usernames: users.map(&:username)
+      usernames: removed_users,
+      skipped_usernames: skipped_users
     )
   end
 
@@ -547,6 +556,15 @@ class GroupsController < ApplicationController
         if current_user.admin
           default_params.push(*[
             :incoming_email,
+            :smtp_server,
+            :smtp_port,
+            :smtp_ssl,
+            :imap_server,
+            :imap_port,
+            :imap_ssl,
+            :imap_mailbox_name,
+            :email_username,
+            :email_password,
             :primary_group,
             :visibility_level,
             :members_visibility_level,

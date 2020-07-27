@@ -15,6 +15,12 @@ import RestModel from "discourse/models/rest";
 import discourseComputed from "discourse-common/utils/decorators";
 import { formattedReminderTime } from "discourse/lib/bookmark";
 
+export const AUTO_DELETE_PREFERENCES = {
+  NEVER: 0,
+  WHEN_REMINDER_SENT: 1,
+  ON_OWNER_REPLY: 2
+};
+
 const Bookmark = RestModel.extend({
   newBookmark: none("id"),
 
@@ -120,11 +126,17 @@ const Bookmark = RestModel.extend({
     ).capitalize();
   },
 
-  loadItems() {
-    return ajax(`/u/${this.user.username}/bookmarks.json`, { cache: "false" });
+  loadItems(params) {
+    let url = `/u/${this.user.username}/bookmarks.json`;
+
+    if (params) {
+      url += "?" + $.param(params);
+    }
+
+    return ajax(url, { cache: "false" });
   },
 
-  loadMore() {
+  loadMore(additionalParams) {
     if (!this.more_bookmarks_url) {
       return Promise.resolve();
     }
@@ -136,7 +148,15 @@ const Bookmark = RestModel.extend({
       if (params) {
         moreUrl += "?" + params;
       }
+      if (additionalParams) {
+        if (moreUrl.includes("?")) {
+          moreUrl += "&" + $.param(additionalParams);
+        } else {
+          moreUrl += "?" + $.param(additionalParams);
+        }
+      }
     }
+
     return ajax({ url: moreUrl });
   },
 
@@ -157,7 +177,6 @@ const Bookmark = RestModel.extend({
 Bookmark.reopenClass({
   create(args) {
     args = args || {};
-    args.siteSettings = args.siteSettings || Discourse.SiteSettings;
     args.currentUser = args.currentUser || Discourse.currentUser;
     return this._super(args);
   }

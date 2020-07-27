@@ -27,14 +27,14 @@ function isUnseen(topic) {
   return !topic.is_seen;
 }
 
-function hasMutedTags(topicTagIds, mutedTagIds) {
+function hasMutedTags(topicTagIds, mutedTagIds, siteSettings) {
   if (!mutedTagIds || !topicTagIds) {
     return false;
   }
   return (
-    (Discourse.SiteSettings.remove_muted_tags_from_latest === "always" &&
+    (siteSettings.remove_muted_tags_from_latest === "always" &&
       topicTagIds.any(tagId => mutedTagIds.includes(tagId))) ||
-    (Discourse.SiteSettings.remove_muted_tags_from_latest === "only_muted" &&
+    (siteSettings.remove_muted_tags_from_latest === "only_muted" &&
       topicTagIds.every(tagId => mutedTagIds.includes(tagId)))
   );
 }
@@ -81,7 +81,13 @@ const TopicTrackingState = EmberObject.extend({
 
       if (["new_topic", "latest"].includes(data.message_type)) {
         const mutedTagIds = User.currentProp("muted_tag_ids");
-        if (hasMutedTags(data.payload.topic_tag_ids, mutedTagIds)) {
+        if (
+          hasMutedTags(
+            data.payload.topic_tag_ids,
+            mutedTagIds,
+            this.siteSettings
+          )
+        ) {
           return;
         }
       }
@@ -408,26 +414,31 @@ const TopicTrackingState = EmberObject.extend({
     return new Set(result);
   },
 
-  countCategoryByState(fn, categoryId, tagId) {
+  countCategoryByState(type, categoryId, tagId) {
     const subcategoryIds = this.getSubCategoryIds(categoryId);
+    const mutedCategoryIds =
+      this.currentUser && this.currentUser.muted_category_ids;
     return _.chain(this.states)
-      .filter(fn)
+      .filter(type === "new" ? isNew : isUnread)
       .filter(
         topic =>
           topic.archetype !== "private_message" &&
           !topic.deleted &&
           (!categoryId || subcategoryIds.has(topic.category_id)) &&
-          (!tagId || (topic.tags && topic.tags.indexOf(tagId) > -1))
+          (!tagId || (topic.tags && topic.tags.indexOf(tagId) > -1)) &&
+          (type !== "new" ||
+            !mutedCategoryIds ||
+            mutedCategoryIds.indexOf(topic.category_id) === -1)
       )
       .value().length;
   },
 
   countNew(categoryId, tagId) {
-    return this.countCategoryByState(isNew, categoryId, tagId);
+    return this.countCategoryByState("new", categoryId, tagId);
   },
 
   countUnread(categoryId, tagId) {
-    return this.countCategoryByState(isUnread, categoryId, tagId);
+    return this.countCategoryByState("unread", categoryId, tagId);
   },
 
   countTags(tags) {
@@ -445,7 +456,7 @@ const TopicTrackingState = EmberObject.extend({
       ) {
         let newTopic = isNew(topic);
         let unreadTopic = isUnread(topic);
-        if (isUnread || isNew) {
+        if (newTopic || unreadTopic) {
           tags.forEach(tag => {
             if (topic.tags.indexOf(tag) > -1) {
               if (unreadTopic) {

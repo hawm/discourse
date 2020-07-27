@@ -197,6 +197,23 @@ basic:
       - twitter
       - facebook
       - email
+  share_quote_visibility:
+    client: true
+    type: enum
+    default: "anonymous"
+    choices:
+      - none
+      - anonymous
+      - all
+  share_quote_buttons:
+    client: true
+    type: list
+    default: "twitter|email"
+    allow_any: false
+    choices:
+      - twitter
+      - facebook
+      - email
   desktop_category_page_style:
     client: true
     enum: "CategoryPageStyle"
@@ -354,6 +371,7 @@ login:
   enable_facebook_logins:
     default: false
   facebook_app_id:
+    client: true
     default: ""
     regex: "^\\d+$"
   facebook_app_secret:
@@ -379,6 +397,9 @@ login:
   discord_trusted_guilds:
     default: ""
     type: list
+  external_auth_skip_create_confirm:
+    default: false
+    client: true
   enable_sso:
     client: true
     default: false
@@ -422,10 +443,10 @@ login:
   sso_overrides_website: false
   sso_overrides_card_background: false
   sso_not_approved_url: ""
-  email_domains_blacklist:
+  blocked_email_domains:
     default: "mailinator.com"
     type: list
-  email_domains_whitelist:
+  allowed_email_domains:
     default: ""
     type: list
   auto_approve_email_domains:
@@ -457,8 +478,8 @@ users:
     default: false
     client: true
     validator: "UnicodeUsernameValidator"
-  unicode_username_character_whitelist:
-    validator: "UnicodeUsernameWhitelistValidator"
+  allowed_unicode_username_characters:
+    validator: "UnicodeUsernameAllowlistValidator"
     default: ""
     locale_default:
       cs: "[ěščřžýáíéóůúďťňĚŠČŘŽÝÁÍÉÓŮÚĎŤŇ]"
@@ -552,7 +573,7 @@ users:
     client: true
   show_inactive_accounts:
     default: false
-  user_website_domains_whitelist:
+  allowed_user_website_domains:
     default: ""
     type: list
   hide_suspension_reasons:
@@ -597,7 +618,7 @@ groups:
     default: true
   group_in_subject:
     default: false
-  enable_category_group_review:
+  enable_category_group_moderation:
     client: true
     default: false
 
@@ -777,7 +798,7 @@ posting:
       ko: 50
       zh_CN: 50
       zh_TW: 50
-  whitelisted_link_domains:
+  allowed_link_domains:
     default: ""
     type: list
   newuser_max_links: 2
@@ -887,7 +908,7 @@ posting:
   embed_unlisted: false
   embed_truncate: true
   embed_support_markdown: false
-  embed_whitelist_selector: ""
+  allowed_embed_selectors: ""
   allowed_href_schemes:
     client: true
     default: ""
@@ -1008,6 +1029,32 @@ email:
       - X-Spam-Flag
       - X-Spam-Status
       - X-SES-Spam-Verdict
+  enable_imap:
+    default: false
+    client: true
+    hidden: true
+  enable_imap_write:
+    default: false
+    hidden: true
+  enable_imap_idle:
+    default: false
+    hidden: true
+  enable_smtp:
+    default: false
+    client: true
+    hidden: true
+  imap_polling_period_mins:
+    default: 5
+    hidden: true
+  imap_polling_old_emails:
+    default: 1000
+    hidden: true
+  imap_polling_new_emails:
+    default: 250
+    hidden: true
+  imap_batch_import_email:
+    default: 100
+    hidden: true
   email_prefix: ""
   email_site_title: ""
   disable_emails:
@@ -1035,7 +1082,7 @@ email:
   max_emails_per_day_per_user: 100
   enable_staged_users: true
   maximum_staged_users_per_email: 10
-  auto_generated_whitelist:
+  auto_generated_allowlist:
     default: ""
     type: list
   block_auto_generated_emails: true
@@ -1062,11 +1109,11 @@ email:
   reset_bounce_score_after_days:
     default: 30
     max: 36500
-  attachment_content_type_blacklist:
+  blocked_attachment_content_types:
     type: list
     default: "pkcs7|x-vcard"
     list_type: compact
-  attachment_filename_blacklist:
+  blocked_attachment_filenames:
     type: list
     default: "smime.p7s|signature.asc|winmail.dat"
     list_type: compact
@@ -1099,6 +1146,9 @@ email:
     max: 36500
   enable_secondary_emails:
     client: true
+    default: true
+    hidden: true
+  preserve_email_structure_when_styling:
     default: true
     hidden: true
 
@@ -1270,6 +1320,8 @@ files:
   decompressed_backup_max_file_size_mb:
     default: 100000
     hidden: true
+  convert_heif_to_jpeg:
+    default: false
 
 trust:
   default_trust_level:
@@ -1404,25 +1456,25 @@ security:
   cors_origins:
     default: ""
     type: list
-  use_admin_ip_whitelist:
+  use_admin_ip_allowlist:
     default: false
     client: true
-  blacklist_ip_blocks:
+  blocked_ip_blocks:
     default: ""
     type: list
     list_type: compact
-  whitelist_internal_hosts:
+  allowed_internal_hosts:
     default: ""
     type: list
   allowed_iframes:
     default: "https://www.google.com/maps/embed?|https://www.openstreetmap.org/export/embed.html?|https://calendar.google.com/calendar/embed?|https://codepen.io/"
     type: list
     client: true
-  whitelisted_crawler_user_agents:
+  allowed_crawler_user_agents:
     type: list
     default: ""
     list_type: compact
-  blacklisted_crawler_user_agents:
+  blocked_crawler_user_agents:
     type: list
     default: "mauibot|semrushbot|ahrefsbot|blexbot|seo spider"
     list_type: compact
@@ -1459,14 +1511,14 @@ onebox:
       ja: 200
       zh_CN: 200
       zh_TW: 200
-  onebox_domains_blacklist:
+  blocked_onebox_domains:
     default: ""
     type: list
     list_type: compact
   max_oneboxes_per_post:
     default: 50
     client: true
-  inline_onebox_domains_whitelist:
+  allowed_inline_onebox_domains:
     default: ""
     type: list
     list_type: compact
@@ -1490,7 +1542,7 @@ spam:
   notify_mods_when_user_silenced: false
   flag_sockpuppets: false
   newuser_spam_host_threshold: 3
-  white_listed_spam_host_domains:
+  allowed_spam_host_domains:
     default: ""
     type: list
   levenshtein_distance_spammer_emails:
@@ -1542,7 +1594,10 @@ rate_limits:
   rate_limit_create_post: 5
   rate_limit_new_user_create_topic: 120
   rate_limit_new_user_create_post: 30
-  rate_limit_search_anon:
+  rate_limit_search_anon_global:
+    hidden: true
+    default: 150
+  rate_limit_search_anon_user:
     hidden: true
     default: 15
   rate_limit_search_user:
@@ -1667,13 +1722,16 @@ embedding:
   embed_post_limit:
     default: 100
     hidden: true
+  embed_topic_limit_per_page:
+    default: 200
+    hidden: true
   embed_title_scrubber:
     default: ""
     hidden: true
-  embed_blacklist_selector:
+  blocked_embed_selectors:
     default: ""
     hidden: true
-  embed_classname_whitelist:
+  allowed_embed_classnames:
     default: "emoji"
     hidden: true
 
@@ -1731,10 +1789,7 @@ backups:
 
 search:
   search_ranking_normalization:
-    default: '1'
-    hidden: true
-  search_inject_extra_terms:
-    default: true
+    default: "0"
     hidden: true
   min_search_term_length:
     client: true
@@ -2063,7 +2118,7 @@ user_preferences:
     enum: "PreviousRepliesSiteSetting"
     default: 2
   default_email_in_reply_to:
-    default: true
+    default: false
 
   default_other_new_topic_duration_minutes:
     enum: "NewTopicDurationSiteSetting"

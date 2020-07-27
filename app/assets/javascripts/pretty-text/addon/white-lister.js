@@ -108,7 +108,7 @@ export default class WhiteLister {
   }
 }
 
-// Only add to `default` when you always want your whitelist to occur. In other words,
+// Only add to `default` when you always want your allowlist to occur. In other words,
 // don't change this for a plugin or a feature that can be disabled
 export const DEFAULT_LIST = [
   "a.attachment",
@@ -185,7 +185,6 @@ export const DEFAULT_LIST = [
   "span.excerpt",
   "div.excerpt",
   "div.video-container",
-  "p.video-description",
   "span.hashtag",
   "span.mention",
   "strike",
@@ -203,14 +202,16 @@ export const DEFAULT_LIST = [
   "track[srclang]",
   "ul",
   "video",
+  "video[autoplay]",
   "video[controls]",
   "video[controlslist]",
   "video[crossorigin]",
   "video[height]",
+  "video[loop]",
+  "video[muted]",
   "video[poster]",
-  "video[width]",
-  "video[controls]",
   "video[preload]",
+  "video[width]",
   "ruby",
   "ruby[lang]",
   "rb",

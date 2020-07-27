@@ -15,7 +15,7 @@ import { findRawTemplate } from "discourse-common/lib/raw-templates";
 import { siteDir } from "discourse/lib/text-direction";
 import {
   determinePostReplaceSelection,
-  clipboardData,
+  clipboardHelpers,
   safariHacksDisabled,
   caretPosition,
   inCodeBlock
@@ -440,7 +440,7 @@ export default Component.extend({
           return false;
         }
 
-        const matches = /(?:^|[>.,\/#!$%^&*;:{}=\-_`~()])(:(?!:).?[\w-]*:?(?!:)(?:t\d?)?:?) ?$/gi.exec(
+        const matches = /(?:^|[\s.\?,@\/#!%&*;:\[\]{}=\-_()])(:(?!:).?[\w-]*:?(?!:)(?:t\d?)?:?) ?$/gi.exec(
           text.substring(0, cp)
         );
 
@@ -863,7 +863,10 @@ export default Component.extend({
     }
 
     const isComposer = $("#reply-control .d-editor-input").is(":focus");
-    let { clipboard, canPasteHtml, canUpload } = clipboardData(e, isComposer);
+    let { clipboard, canPasteHtml, canUpload } = clipboardHelpers(e, {
+      siteSettings: this.siteSettings,
+      canUpload: isComposer
+    });
 
     let plainText = clipboard.getData("text/plain");
     let html = clipboard.getData("text/html");

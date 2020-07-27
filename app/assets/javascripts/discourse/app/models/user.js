@@ -50,7 +50,7 @@ const User = RestModel.extend({
 
   @discourseComputed("can_be_deleted", "post_count")
   canBeDeleted(canBeDeleted, postCount) {
-    const maxPostCount = Discourse.SiteSettings.delete_all_posts_max;
+    const maxPostCount = this.siteSettings.delete_all_posts_max;
     return canBeDeleted && postCount <= maxPostCount;
   },
 
@@ -100,7 +100,7 @@ const User = RestModel.extend({
 
   @discourseComputed("username", "name")
   displayName(username, name) {
-    if (Discourse.SiteSettings.enable_names && !isEmpty(name)) {
+    if (this.siteSettings.enable_names && !isEmpty(name)) {
       return name;
     }
     return username;
@@ -108,7 +108,7 @@ const User = RestModel.extend({
 
   @discourseComputed("profile_background_upload_url")
   profileBackgroundUrl(bgUrl) {
-    if (isEmpty(bgUrl) || !Discourse.SiteSettings.allow_profile_backgrounds) {
+    if (isEmpty(bgUrl) || !this.siteSettings.allow_profile_backgrounds) {
       return "".htmlSafe();
     }
     return ("background-image: url(" + getURLWithCDN(bgUrl) + ")").htmlSafe();
@@ -276,6 +276,7 @@ const User = RestModel.extend({
       "user_fields",
       "muted_usernames",
       "ignored_usernames",
+      "allowed_pm_usernames",
       "profile_background_upload_url",
       "card_background_upload_url",
       "muted_tags",
@@ -311,6 +312,7 @@ const User = RestModel.extend({
       "include_tl0_in_digests",
       "theme_ids",
       "allow_private_messages",
+      "enable_allowed_pm_users",
       "homepage_id",
       "hide_profile_and_presence",
       "text_size",
@@ -664,32 +666,32 @@ const User = RestModel.extend({
     return (
       this.staff ||
       this.trust_level > 0 ||
-      Discourse.SiteSettings[`newuser_max_${type}s`] > 0
+      this.siteSettings[`newuser_max_${type}s`] > 0
     );
   },
 
-  createInvite(email, group_names, custom_message) {
+  createInvite(email, group_ids, custom_message) {
     return ajax("/invites", {
       type: "POST",
-      data: { email, group_names, custom_message }
+      data: { email, group_ids, custom_message }
     });
   },
 
-  generateInviteLink(email, group_names, topic_id) {
+  generateInviteLink(email, group_ids, topic_id) {
     return ajax("/invites/link", {
       type: "POST",
-      data: { email, group_names, topic_id }
+      data: { email, group_ids, topic_id }
     });
   },
 
   generateMultipleUseInviteLink(
-    group_names,
+    group_ids,
     max_redemptions_allowed,
     expires_at
   ) {
     return ajax("/invites/link", {
       type: "POST",
-      data: { group_names, max_redemptions_allowed, expires_at }
+      data: { group_ids, max_redemptions_allowed, expires_at }
     });
   },
 
@@ -724,7 +726,7 @@ const User = RestModel.extend({
 
   @discourseComputed("can_delete_account")
   canDeleteAccount(canDeleteAccount) {
-    return !Discourse.SiteSettings.enable_sso && canDeleteAccount;
+    return !this.siteSettings.enable_sso && canDeleteAccount;
   },
 
   delete: function() {
@@ -881,7 +883,7 @@ const User = RestModel.extend({
 
   @discourseComputed("second_factor_enabled", "staff")
   enforcedSecondFactor(secondFactorEnabled, staff) {
-    const enforce = Discourse.SiteSettings.enforce_second_factor;
+    const enforce = this.siteSettings.enforce_second_factor;
     return (
       !secondFactorEnabled &&
       (enforce === "all" || (enforce === "staff" && staff))

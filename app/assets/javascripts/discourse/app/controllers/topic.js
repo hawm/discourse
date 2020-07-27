@@ -23,6 +23,7 @@ import showModal from "discourse/lib/show-modal";
 import TopicTimer from "discourse/models/topic-timer";
 import { Promise } from "rsvp";
 import { escapeExpression } from "discourse/lib/utilities";
+import { AUTO_DELETE_PREFERENCES } from "discourse/models/bookmark";
 
 let customPostMessageCallbacks = {};
 
@@ -77,15 +78,6 @@ export default Controller.extend(bufferedProperty("model"), {
     }
   },
 
-  @discourseComputed("model.details.can_create_post", "composer.visible")
-  embedQuoteButton(canCreatePost, composerOpened) {
-    return (
-      (canCreatePost || composerOpened) &&
-      this.currentUser &&
-      this.currentUser.get("enable_quoting")
-    );
-  },
-
   @discourseComputed("model.postStream.loaded", "model.category_id")
   showSharedDraftControls(loaded, categoryId) {
     let draftCat = this.site.shared_drafts_category_id;
@@ -119,6 +111,10 @@ export default Controller.extend(bufferedProperty("model"), {
     this._super(...arguments);
 
     this.appEvents.on("post:show-revision", this, "_showRevision");
+    this.appEvents.on("post:created", this, () => {
+      this._removeDeleteOnOwnerReplyBookmarks();
+      this.appEvents.trigger("post-stream:refresh", { force: true });
+    });
 
     this.setProperties({
       selectedPostIds: [],
@@ -192,6 +188,20 @@ export default Controller.extend(bufferedProperty("model"), {
       : null;
   },
 
+  _removeDeleteOnOwnerReplyBookmarks() {
+    let posts = this.model.get("postStream").posts;
+    posts
+      .filter(
+        p =>
+          p.bookmarked &&
+          p.bookmark_auto_delete_preference ===
+            AUTO_DELETE_PREFERENCES.ON_OWNER_REPLY
+      )
+      .forEach(p => {
+        p.clearBookmark();
+      });
+  },
+
   _forceRefreshPostStream() {
     this.appEvents.trigger("post-stream:refresh", { force: true });
   },
@@ -208,12 +218,12 @@ export default Controller.extend(bufferedProperty("model"), {
   _smallActionPostIds() {
     const smallActionsPostIds = new Set();
     const posts = this.get("model.postStream.posts");
-    if (posts) {
-      const small_action = this.site.get("post_types.small_action");
+    if (posts && this.site) {
+      const smallAction = this.site.get("post_types.small_action");
       const whisper = this.site.get("post_types.whisper");
       posts.forEach(post => {
         if (
-          post.post_type === small_action ||
+          post.post_type === smallAction ||
           (!post.cooked && post.post_type === whisper)
         ) {
           smallActionsPostIds.add(post.id);
@@ -965,16 +975,16 @@ export default Controller.extend(bufferedProperty("model"), {
         let users = this.get("model.details.allowed_users");
         let groups = this.get("model.details.allowed_groups");
 
-        let usernames = [];
-        users.forEach(user => usernames.push(user.username));
-        groups.forEach(group => usernames.push(group.name));
-        usernames = usernames.join();
+        let recipients = [];
+        users.forEach(user => recipients.push(user.username));
+        groups.forEach(group => recipients.push(group.name));
+        recipients = recipients.join();
 
         options = {
           action: Composer.PRIVATE_MESSAGE,
           archetypeId: "private_message",
           draftKey: post.topic.draft_key,
-          usernames: usernames
+          recipients
         };
       } else {
         options = {

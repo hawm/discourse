@@ -46,6 +46,32 @@ describe Middleware::AnonymousCache::Helper do
     end
   end
 
+  context "with header-based locale locale" do
+    it "handles different languages" do
+      # Normally does not check the language header
+      french1 = new_helper("HTTP_ACCEPT_LANGUAGE" => "fr").cache_key
+      french2 = new_helper("HTTP_ACCEPT_LANGUAGE" => "FR").cache_key
+      english = new_helper("HTTP_ACCEPT_LANGUAGE" => SiteSetting.default_locale).cache_key
+      none = new_helper.cache_key
+
+      expect(none).to eq(french1)
+      expect(none).to eq(french2)
+      expect(none).to eq(english)
+
+      SiteSetting.allow_user_locale = true
+      SiteSetting.set_locale_from_accept_language_header = true
+
+      french1 = new_helper("HTTP_ACCEPT_LANGUAGE" => "fr").cache_key
+      french2 = new_helper("HTTP_ACCEPT_LANGUAGE" => "FR").cache_key
+      english = new_helper("HTTP_ACCEPT_LANGUAGE" => SiteSetting.default_locale).cache_key
+      none = new_helper.cache_key
+
+      expect(none).to eq(english)
+      expect(french1).to eq(french2)
+      expect(french1).not_to eq(none)
+    end
+  end
+
   context 'force_anonymous!' do
     before do
       RateLimiter.enable
@@ -189,8 +215,8 @@ describe Middleware::AnonymousCache::Helper do
       @status, @response_header, @response = middleware.call(@env)
     end
 
-    it "applies whitelisted_crawler_user_agents correctly" do
-      SiteSetting.whitelisted_crawler_user_agents = 'Googlebot'
+    it "applies allowed_crawler_user_agents correctly" do
+      SiteSetting.allowed_crawler_user_agents = 'Googlebot'
 
       get '/', headers: {
         'HTTP_USER_AGENT' => 'Googlebot/2.1 (+http://www.google.com/bot.html)'
@@ -210,7 +236,7 @@ describe Middleware::AnonymousCache::Helper do
     end
 
     it "doesn't block api requests" do
-      SiteSetting.whitelisted_crawler_user_agents = 'Googlebot'
+      SiteSetting.allowed_crawler_user_agents = 'Googlebot'
       api_key = Fabricate(:api_key)
 
       get "/latest?api_key=#{api_key.key}&api_username=system", headers: {
@@ -219,8 +245,8 @@ describe Middleware::AnonymousCache::Helper do
       expect(@status).to eq(200)
     end
 
-    it "applies blacklisted_crawler_user_agents correctly" do
-      SiteSetting.blacklisted_crawler_user_agents = 'Googlebot'
+    it "applies blocked_crawler_user_agents correctly" do
+      SiteSetting.blocked_crawler_user_agents = 'Googlebot'
 
       get '/', headers: non_crawler
       expect(@status).to eq(200)
@@ -239,7 +265,7 @@ describe Middleware::AnonymousCache::Helper do
     end
 
     it "should never block robots.txt" do
-      SiteSetting.blacklisted_crawler_user_agents = 'Googlebot'
+      SiteSetting.blocked_crawler_user_agents = 'Googlebot'
 
       get '/robots.txt', headers: {
         'HTTP_USER_AGENT' => 'Googlebot/2.1 (+http://www.google.com/bot.html)'
@@ -249,7 +275,7 @@ describe Middleware::AnonymousCache::Helper do
     end
 
     it "should never block srv/status" do
-      SiteSetting.blacklisted_crawler_user_agents = 'Googlebot'
+      SiteSetting.blocked_crawler_user_agents = 'Googlebot'
 
       get '/srv/status', headers: {
         'HTTP_USER_AGENT' => 'Googlebot/2.1 (+http://www.google.com/bot.html)'
@@ -259,7 +285,7 @@ describe Middleware::AnonymousCache::Helper do
     end
 
     it "blocked crawlers shouldn't log page views" do
-      SiteSetting.blacklisted_crawler_user_agents = 'Googlebot'
+      SiteSetting.blocked_crawler_user_agents = 'Googlebot'
 
       get '/', headers: {
         'HTTP_USER_AGENT' => 'Googlebot/2.1 (+http://www.google.com/bot.html)'
@@ -269,7 +295,7 @@ describe Middleware::AnonymousCache::Helper do
     end
 
     it "blocks json requests" do
-      SiteSetting.blacklisted_crawler_user_agents = 'Googlebot'
+      SiteSetting.blocked_crawler_user_agents = 'Googlebot'
 
       get '/srv/status.json', headers: {
         'HTTP_USER_AGENT' => 'Googlebot/2.1 (+http://www.google.com/bot.html)'

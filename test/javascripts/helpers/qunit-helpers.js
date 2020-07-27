@@ -22,7 +22,10 @@ import { resetDecorators as resetPluginOutletDecorators } from "discourse/compon
 import { resetUsernameDecorators } from "discourse/helpers/decorate-username-selector";
 import { resetCache as resetOneboxCache } from "pretty-text/oneboxer";
 import { resetCustomPostMessageCallbacks } from "discourse/controllers/topic";
+import { _clearSnapshots } from "select-kit/components/composer-actions";
 import User from "discourse/models/user";
+import { mapRoutes } from "discourse/mapping-router";
+import { currentSettings, mergeSettings } from "helpers/site-settings";
 
 export function currentUser() {
   return User.create(sessionFixtures["/session/current.json"].current_user);
@@ -100,6 +103,36 @@ export function applyPretender(name, server, helper) {
   if (cb) cb(server, helper);
 }
 
+export function controllerModule(name, args = {}) {
+  moduleFor(name, name, {
+    setup() {
+      this.registry.register("router:main", mapRoutes());
+      let controller = this.subject();
+      controller.siteSettings = currentSettings();
+      if (args.setupController) {
+        args.setupController(controller);
+      }
+    },
+    needs: args.needs
+  });
+}
+
+export function discourseModule(name, hooks) {
+  QUnit.module(name, {
+    beforeEach() {
+      this.siteSettings = currentSettings();
+      if (hooks && hooks.beforeEach) {
+        hooks.beforeEach.call(this);
+      }
+    },
+    afterEach() {
+      if (hooks && hooks.afterEach) {
+        hooks.afterEach.call(this);
+      }
+    }
+  });
+}
+
 export function acceptance(name, options) {
   options = options || {};
 
@@ -128,15 +161,12 @@ export function acceptance(name, options) {
       }
 
       if (options.settings) {
-        Discourse.SiteSettings = jQuery.extend(
-          true,
-          Discourse.SiteSettings,
-          options.settings
-        );
+        mergeSettings(options.settings);
       }
+      this.siteSettings = currentSettings();
 
       if (options.site) {
-        resetSite(Discourse.SiteSettings, options.site);
+        resetSite(currentSettings(), options.site);
       }
 
       clearOutletCache();
@@ -152,7 +182,7 @@ export function acceptance(name, options) {
       flushMap();
       localStorage.clear();
       User.resetCurrent();
-      resetSite(Discourse.SiteSettings);
+      resetSite(currentSettings());
       resetExtraClasses();
       clearOutletCache();
       clearHTMLCache();
@@ -166,6 +196,7 @@ export function acceptance(name, options) {
       resetUsernameDecorators();
       resetOneboxCache();
       resetCustomPostMessageCallbacks();
+      _clearSnapshots();
       Discourse._runInitializer("instanceInitializers", function(
         initName,
         initializer

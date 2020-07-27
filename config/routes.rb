@@ -269,6 +269,10 @@ Discourse::Application.routes.draw do
       resources :api, only: [:index], constraints: AdminConstraint.new do
         collection do
           resources :keys, controller: 'api', only: [:index, :show, :update, :create, :destroy] do
+            collection do
+              get 'scopes' => 'api#scopes'
+            end
+
             member do
               post "revoke" => "api#revoke_key"
               post "undo-revoke" => "api#undo_revoke_key"
@@ -572,6 +576,7 @@ Discourse::Application.routes.draw do
             manage/members
             manage/membership
             manage/interaction
+            manage/email
             manage/logs
           }.each do |path|
             get path => 'groups#show'
@@ -674,8 +679,6 @@ Discourse::Application.routes.draw do
     get "c/*category_slug_path_with_id.rss" => "list#category_feed", format: :rss
     scope path: 'c/*category_slug_path_with_id' do
       get "/none" => "list#category_none_latest"
-      get "/none/l/top" => "list#category_none_top", as: "category_none_top"
-      get "/l/top" => "list#category_top", as: "category_top"
 
       TopTopic.periods.each do |period|
         get "/none/l/top/#{period}" => "list#category_none_top_#{period}", as: "category_none_top_#{period}"
@@ -691,7 +694,7 @@ Discourse::Application.routes.draw do
       get "/" => "list#category_default", as: "category_default"
     end
 
-    get "category_hashtags/check" => "category_hashtags#check"
+    get "hashtags" => "hashtags#show"
 
     TopTopic.periods.each do |period|
       get "top/#{period}.rss" => "list#top_#{period}_feed", format: :rss
@@ -706,7 +709,6 @@ Discourse::Application.routes.draw do
       get "#{filter}" => "list##{filter}"
     end
 
-    get "top" => "list#top"
     get "search/query" => "search#query"
     get "search" => "search#show"
     post "search/click" => "search#click"
@@ -886,7 +888,6 @@ Discourse::Application.routes.draw do
       get '/' => 'tags#index'
       get '/filter/list' => 'tags#index'
       get '/filter/search' => 'tags#search'
-      get '/check' => 'tags#check_hashtag'
       get '/personal_messages/:username' => 'tags#personal_messages'
       post '/upload' => 'tags#upload'
       get '/unused' => 'tags#list_unused'
@@ -939,8 +940,6 @@ Discourse::Application.routes.draw do
     end
     # special case for categories
     root to: "categories#index", constraints: HomePageConstraint.new("categories"), as: "categories_index"
-    # special case for top
-    root to: "list#top", constraints: HomePageConstraint.new("top"), as: "top_lists"
 
     root to: 'finish_installation#index', constraints: HomePageConstraint.new("finish_installation"), as: 'installation_redirect'
 

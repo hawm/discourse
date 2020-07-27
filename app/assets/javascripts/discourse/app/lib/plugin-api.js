@@ -56,10 +56,12 @@ import { addExtraIconRenderer } from "discourse/helpers/category-link";
 import { queryRegistry } from "discourse/widgets/widget";
 import Composer from "discourse/models/composer";
 import { on } from "@ember/object/evented";
+import { addQuickAccessProfileItem } from "discourse/widgets/quick-access-profile";
 import KeyboardShortcuts from "discourse/lib/keyboard-shortcuts";
+import { addFeaturedLinkMetaDecorator } from "discourse/lib/render-topic-featured-link";
 
 // If you add any methods to the API ensure you bump up this number
-const PLUGIN_API_VERSION = "0.10.1";
+const PLUGIN_API_VERSION = "0.10.2";
 
 class PluginApi {
   constructor(version, container) {
@@ -1156,6 +1158,26 @@ class PluginApi {
    **/
   addToHeaderIcons(icon) {
     addToHeaderIcons(icon);
+  }
+
+  /**
+   * Adds an item to the quick access profile panel, before "Log Out".
+   *
+   * ```
+   * api.addQuickAccessProfileItem({
+   *   icon: "pencil-alt",
+   *   href: "/somewhere",
+   *   content: I18n.t("user.somewhere")
+   * })
+   * ```
+   *
+   **/
+  addQuickAccessProfileItem(item) {
+    addQuickAccessProfileItem(item);
+  }
+
+  addFeaturedLinkMetaDecorator(decorator) {
+    addFeaturedLinkMetaDecorator(decorator);
   }
 }
 

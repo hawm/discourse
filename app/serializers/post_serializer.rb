@@ -54,7 +54,7 @@ class PostSerializer < BasicPostSerializer
              :bookmark_id,
              :bookmark_reminder_type,
              :bookmark_name,
-             :bookmark_delete_when_reminder_sent,
+             :bookmark_auto_delete_preference,
              :raw,
              :actions_summary,
              :moderator?,
@@ -319,34 +319,32 @@ class PostSerializer < BasicPostSerializer
     !(SiteSetting.suppress_reply_when_quoting && object.reply_quoted?) && object.reply_to_user
   end
 
-  # this atrtribute is not even included unless include_bookmarked? is true,
-  # which is why it is always true if included
   def bookmarked
-    true
-  end
-
-  def include_bookmarked?
-    post_bookmark.present?
+    @bookmarked ||= post_bookmark.present?
   end
 
   def include_bookmark_reminder_at?
-    include_bookmarked?
+    bookmarked
   end
 
   def include_bookmark_reminder_type?
-    include_bookmarked?
+    bookmarked
   end
 
   def include_bookmark_name?
-    include_bookmarked?
+    bookmarked
   end
 
-  def include_bookmark_delete_when_reminder_sent?
-    include_bookmarked?
+  def include_bookmark_auto_delete_preference?
+    bookmarked
+  end
+
+  def include_bookmark_delete_on_owner_reply?
+    bookmarked
   end
 
   def include_bookmark_id?
-    include_bookmarked?
+    bookmarked
   end
 
   def post_bookmark
@@ -367,8 +365,8 @@ class PostSerializer < BasicPostSerializer
     post_bookmark&.name
   end
 
-  def bookmark_delete_when_reminder_sent
-    post_bookmark&.delete_when_reminder_sent
+  def bookmark_auto_delete_preference
+    post_bookmark&.auto_delete_preference
   end
 
   def bookmark_id

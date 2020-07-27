@@ -148,22 +148,33 @@ class Plugin::Instance
   end
 
   # Applies to all sites in a multisite environment. Ignores plugin.enabled?
-  def replace_flags(settings: ::FlagSettings.new)
+  def replace_flags(settings: ::FlagSettings.new, score_type_names: [])
     next_flag_id = ReviewableScore.types.values.max + 1
 
-    yield(settings, next_flag_id)
+    yield(settings, next_flag_id) if block_given?
 
     reloadable_patch do |plugin|
       ::PostActionType.replace_flag_settings(settings)
       ::ReviewableScore.reload_types
+      ::ReviewableScore.add_new_types(score_type_names)
     end
   end
 
   def whitelist_staff_user_custom_field(field)
+    Discourse.deprecate("whitelist_staff_user_custom_field is deprecated, use the allow_staff_user_custom_field.", drop_from: "2.6")
+    allow_staff_user_custom_field(field)
+  end
+
+  def allow_staff_user_custom_field(field)
     DiscoursePluginRegistry.register_staff_user_custom_field(field, self)
   end
 
   def whitelist_public_user_custom_field(field)
+    Discourse.deprecate("whitelist_public_user_custom_field is deprecated, use the allow_public_user_custom_field.", drop_from: "2.6")
+    allow_public_user_custom_field(field)
+  end
+
+  def allow_public_user_custom_field(field)
     DiscoursePluginRegistry.register_public_user_custom_field(field, self)
   end
 
@@ -191,8 +202,8 @@ class Plugin::Instance
 
   def custom_avatar_column(column)
     reloadable_patch do |plugin|
-      AvatarLookup.lookup_columns << column
-      AvatarLookup.lookup_columns.uniq!
+      UserLookup.lookup_columns << column
+      UserLookup.lookup_columns.uniq!
     end
   end
 
@@ -247,7 +258,7 @@ class Plugin::Instance
       hidden_method_name = :"#{method_name}_without_enable_check"
       klass.public_send(:define_method, hidden_method_name, &block)
 
-      klass.public_send(callback, options) do |*args|
+      klass.public_send(callback, **options) do |*args|
         public_send(hidden_method_name, *args) if plugin.enabled?
       end
 
@@ -255,10 +266,15 @@ class Plugin::Instance
     end
   end
 
-  # Add a post_custom_fields_whitelister block to the TopicView, respecting if the plugin is enabled
   def topic_view_post_custom_fields_whitelister(&block)
+    Discourse.deprecate("topic_view_post_custom_fields_whitelister is deprecated, use the topic_view_post_custom_fields_allowlister.", drop_from: "2.6")
+    topic_view_post_custom_fields_allowlister(&block)
+  end
+
+  # Add a post_custom_fields_allowlister block to the TopicView, respecting if the plugin is enabled
+  def topic_view_post_custom_fields_allowlister(&block)
     reloadable_patch do |plugin|
-      ::TopicView.add_post_custom_fields_whitelister do |user|
+      ::TopicView.add_post_custom_fields_allowlister do |user|
         plugin.enabled? ? block.call(user) : []
       end
     end
@@ -735,6 +751,10 @@ class Plugin::Instance
     reloadable_patch do
       Reviewable.add_custom_filter(filter)
     end
+  end
+
+  def add_api_key_scope(resource, action)
+    DiscoursePluginRegistry.register_api_key_scope_mapping({ resource => action }, self)
   end
 
   protected

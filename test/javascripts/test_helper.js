@@ -9,7 +9,7 @@
 //= require qunit/qunit/qunit
 //= require ember-qunit
 //= require fake_xml_http_request
-//= require route-recognizer/dist/route-recognizer
+//= require route-recognizer
 //= require pretender/pretender
 //= require locales/i18n
 //= require locales/en_US
@@ -41,6 +41,10 @@
 //= require_self
 //
 //= require jquery.magnific-popup.min.js
+
+let resetSettings = require("helpers/site-settings").resetSettings;
+let createHelperContext = require("discourse-common/lib/helpers")
+  .createHelperContext;
 
 const buildResolver = require("discourse-common/resolver").buildResolver;
 window.setResolver(buildResolver("discourse").create({ namespace: Discourse }));
@@ -104,6 +108,7 @@ function resetSite(siteSettings, extras) {
 }
 
 QUnit.testStart(function(ctx) {
+  let settings = resetSettings();
   server = createPretender.default;
   createPretender.applyDefaultHandlers(server);
   server.handlers = [];
@@ -149,9 +154,6 @@ QUnit.testStart(function(ctx) {
     );
   }
 
-  // Allow our tests to change site settings and have them reset before the next test
-  Discourse.SiteSettings = dup(Discourse.SiteSettingsOriginal);
-
   let getURL = require("discourse-common/lib/get-url");
   getURL.setupURL(null, "http://localhost:3000", "");
   getURL.setupS3CDN(null, null);
@@ -160,7 +162,8 @@ QUnit.testStart(function(ctx) {
   let Session = require("discourse/models/session").default;
   Session.resetCurrent();
   User.resetCurrent();
-  resetSite(Discourse.SiteSettings);
+  resetSite(settings);
+  createHelperContext(settings);
 
   _DiscourseURL.redirectedTo = null;
   _DiscourseURL.redirectTo = function(url) {

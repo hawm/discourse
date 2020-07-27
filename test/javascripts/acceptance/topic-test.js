@@ -190,8 +190,8 @@ QUnit.test("Updating the topic title with unicode emojis", async assert => {
 
 QUnit.test(
   "Updating the topic title with unicode emojis without whitespaces",
-  async assert => {
-    Discourse.SiteSettings.enable_inline_emoji_translation = true;
+  async function(assert) {
+    this.siteSettings.enable_inline_emoji_translation = true;
     await visit("/t/internationalization-localization/280");
     await click("#topic-title .d-icon-pencil-alt");
 
@@ -341,7 +341,7 @@ function selectText(selector) {
 QUnit.test("Quoting a quote keeps the original poster name", async assert => {
   await visit("/t/internationalization-localization/280");
   selectText("#post_5 blockquote");
-  await click(".quote-button");
+  await click(".quote-button .insert-quote");
 
   assert.ok(
     find(".d-editor-input")
@@ -386,7 +386,7 @@ QUnit.test(
   async assert => {
     await visit("/t/internationalization-localization/280");
     selectText("#post_5 .cooked");
-    await click(".quote-button");
+    await click(".quote-button .insert-quote");
 
     assert.ok(
       find(".d-editor-input")

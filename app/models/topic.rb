@@ -52,6 +52,7 @@ class Topic < ActiveRecord::Base
 
   def thumbnail_info(enqueue_if_missing: false, extra_sizes: [])
     return nil unless original = image_upload
+    return nil unless original.filesize < SiteSetting.max_image_size_kb.kilobytes
     return nil unless original.read_attribute(:width) && original.read_attribute(:height)
 
     infos = []
@@ -94,17 +95,28 @@ class Topic < ActiveRecord::Base
   def generate_thumbnails!(extra_sizes: [])
     return nil unless SiteSetting.create_thumbnails
     return nil unless original = image_upload
+    return nil unless original.filesize < SiteSetting.max_image_size_kb.kilobytes
     return nil unless original.width && original.height
+    extra_sizes = [] unless extra_sizes.kind_of?(Array)
 
     (Topic.thumbnail_sizes + extra_sizes).each do |dim|
       TopicThumbnail.find_or_create_for!(original, max_width: dim[0], max_height: dim[1])
     end
   end
 
-  def image_url
+  def image_url(enqueue_if_missing: false)
     thumbnail = topic_thumbnails.detect do |record|
       record.max_width == Topic.share_thumbnail_size[0] &&
         record.max_height == Topic.share_thumbnail_size[1]
+    end
+
+    if thumbnail.nil? &&
+        image_upload &&
+        SiteSetting.create_thumbnails &&
+        image_upload.filesize < SiteSetting.max_image_size_kb.kilobytes &&
+        enqueue_if_missing &&
+        Discourse.redis.set(thumbnail_job_redis_key([]), 1, nx: true, ex: 1.minute)
+      Jobs.enqueue(:generate_topic_thumbnails, { topic_id: id })
     end
 
     raw_url = thumbnail&.optimized_image&.url || image_upload&.url
@@ -191,6 +203,7 @@ class Topic < ActiveRecord::Base
   has_many :ordered_posts, -> { order(post_number: :asc) }, class_name: "Post"
   has_many :topic_allowed_users
   has_many :topic_allowed_groups
+  has_many :incoming_email
 
   has_many :group_archived_messages, dependent: :destroy
   has_many :user_archived_messages, dependent: :destroy
@@ -224,7 +237,7 @@ class Topic < ActiveRecord::Base
 
   has_one :user_warning
   has_one :first_post, -> { where post_number: 1 }, class_name: 'Post'
-  has_one :topic_search_data, dependent: :delete
+  has_one :topic_search_data
   has_one :topic_embed, dependent: :destroy
 
   belongs_to :image_upload, class_name: 'Upload'
@@ -325,8 +338,7 @@ class Topic < ActiveRecord::Base
       ApplicationController.banner_json_cache.clear
     end
 
-    if tags_changed || saved_change_to_attribute?(:category_id)
-
+    if tags_changed || saved_change_to_attribute?(:category_id) || saved_change_to_attribute?(:title)
       SearchIndexer.queue_post_reindex(self.id)
 
       if tags_changed
@@ -609,6 +621,12 @@ class Topic < ActiveRecord::Base
     TopicStatusUpdater.new(self, user).update!(status, enabled, opts)
     DiscourseEvent.trigger(:topic_status_updated, self, status, enabled)
 
+    if status == 'closed'
+      StaffActionLogger.new(user).log_topic_closed(self, closed: enabled)
+    elsif status == 'archived'
+      StaffActionLogger.new(user).log_topic_archived(self, archived: enabled)
+    end
+
     if enabled && private_message? && status.to_s["closed"]
       group_ids = user.groups.pluck(:id)
       if group_ids.present?
@@ -857,7 +875,8 @@ class Topic < ActiveRecord::Base
                               no_bump: opts[:bump].blank?,
                               topic_id: self.id,
                               skip_validations: true,
-                              custom_fields: opts[:custom_fields])
+                              custom_fields: opts[:custom_fields],
+                              import_mode: opts[:import_mode])
 
     if (new_post = creator.create) && new_post.present?
       increment!(:moderator_posts_count) if new_post.persisted?
@@ -1060,7 +1079,13 @@ class Topic < ActiveRecord::Base
   end
 
   def update_action_counts
-    update_column(:like_count, Post.where(topic_id: id).sum(:like_count))
+    update_column(
+      :like_count,
+      Post
+        .where.not(post_type: Post.types[:whisper])
+        .where(topic_id: id)
+        .sum(:like_count)
+    )
   end
 
   def posters_summary(options = {}) # avatar lookup in options

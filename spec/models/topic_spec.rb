@@ -1082,6 +1082,10 @@ describe Topic do
     end
 
     context 'archived' do
+      it 'should create a staff action log entry' do
+        expect { topic.update_status('archived', true, @user) }.to change { UserHistory.where(action: UserHistory.actions[:topic_archived]).count }.by(1)
+      end
+
       context 'disable' do
         before do
           @archived_topic = Fabricate(:topic, archived: true, bumped_at: 1.hour.ago)
@@ -1154,6 +1158,10 @@ describe Topic do
         topic = Fabricate(:private_message_topic, allowed_groups: [group])
 
         expect { topic.update_status(status, true, @user) }.to change(topic.group_archived_messages, :count).by(1)
+      end
+
+      it 'should create a staff action log entry' do
+        expect { topic.update_status(status, true, @user) }.to change { UserHistory.where(action: UserHistory.actions[:topic_closed]).count }.by(1)
       end
     end
 
@@ -2632,6 +2640,28 @@ describe Topic do
       end
 
       expect(@topic.auto_close_threshold_reached?).to eq(true)
+    end
+  end
+
+  describe '#update_action_counts' do
+    let(:topic) { Fabricate(:topic) }
+
+    it 'updates like count without including whisper posts' do
+      post = Fabricate(:post, topic: topic)
+      whisper_post = Fabricate(:post, topic: topic, post_type: Post.types[:whisper])
+
+      topic.update_action_counts
+      expect(topic.like_count).to eq(0)
+
+      PostAction.create!(post: post, user: user, post_action_type_id: PostActionType.types[:like])
+
+      topic.update_action_counts
+      expect(topic.like_count).to eq(1)
+
+      PostAction.create!(post: whisper_post, user: user, post_action_type_id: PostActionType.types[:like])
+
+      topic.update_action_counts
+      expect(topic.like_count).to eq(1)
     end
   end
 end

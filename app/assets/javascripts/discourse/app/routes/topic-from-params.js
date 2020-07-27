@@ -70,6 +70,12 @@ export default DiscourseRoute.extend({
         }
         DiscourseURL.jumpToPost(closest, opts);
 
+        // completely clear out all the bookmark related attributes
+        // because they are not in the response if bookmarked == false
+        if (closestPost && !closestPost.bookmarked) {
+          closestPost.clearBookmark();
+        }
+
         if (!isEmpty(topic.draft)) {
           composerController.open({
             draft: Draft.getLocal(topic.draft_key, topic.draft),
