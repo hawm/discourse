@@ -3,8 +3,10 @@ import badgeFixtures from "fixtures/user-badges";
 
 QUnit.module("model:user-badge");
 
-QUnit.test("createFromJson single", assert => {
-  const userBadge = UserBadge.createFromJson(badgeFixtures["/user_badges"]);
+QUnit.test("createFromJson single", (assert) => {
+  const userBadge = UserBadge.createFromJson(
+    JSON.parse(JSON.stringify(badgeFixtures["/user_badges"]))
+  );
   assert.ok(!Array.isArray(userBadge), "does not return an array");
   assert.equal(
     userBadge.get("badge.name"),
@@ -23,9 +25,9 @@ QUnit.test("createFromJson single", assert => {
   );
 });
 
-QUnit.test("createFromJson array", assert => {
+QUnit.test("createFromJson array", (assert) => {
   const userBadges = UserBadge.createFromJson(
-    badgeFixtures["/user-badges/:username"]
+    JSON.parse(JSON.stringify(badgeFixtures["/user-badges/:username"]))
   );
   assert.ok(Array.isArray(userBadges), "returns an array");
   assert.equal(
@@ -35,22 +37,22 @@ QUnit.test("createFromJson array", assert => {
   );
 });
 
-QUnit.test("findByUsername", async assert => {
+QUnit.test("findByUsername", async (assert) => {
   const badges = await UserBadge.findByUsername("anne3");
   assert.ok(Array.isArray(badges), "returns an array");
 });
 
-QUnit.test("findByBadgeId", async assert => {
+QUnit.test("findByBadgeId", async (assert) => {
   const badges = await UserBadge.findByBadgeId(880);
   assert.ok(Array.isArray(badges), "returns an array");
 });
 
-QUnit.test("grant", async assert => {
+QUnit.test("grant", async (assert) => {
   const userBadge = await UserBadge.grant(1, "username");
   assert.ok(!Array.isArray(userBadge), "does not return an array");
 });
 
-QUnit.test("revoke", async assert => {
+QUnit.test("revoke", async (assert) => {
   assert.expect(0);
   const userBadge = UserBadge.create({ id: 1 });
   await userBadge.revoke();

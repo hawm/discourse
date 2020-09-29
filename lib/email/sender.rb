@@ -199,13 +199,24 @@ module Email
         merge_json_x_header('X-MSYS-API', metadata: { message_id: @message.message_id })
       end
 
+      # Parse the HTML again so we can make any final changes before
+      # sending
+      style = Email::Styles.new(@message.html_part.body.to_s)
+
       # Suppress images from short emails
       if SiteSetting.strip_images_from_short_emails &&
         @message.html_part.body.to_s.bytesize <= SiteSetting.short_email_length &&
         @message.html_part.body =~ /<img[^>]+>/
-        style = Email::Styles.new(@message.html_part.body.to_s)
-        @message.html_part.body = style.strip_avatars_and_emojis
+        style.strip_avatars_and_emojis
       end
+
+      # Embeds any of the secure images that have been attached inline,
+      # removing the redaction notice.
+      if SiteSetting.secure_media_allow_embed_images_in_emails
+        style.inline_secure_images(@message.attachments)
+      end
+
+      @message.html_part.body = style.to_s
 
       email_log.message_id = @message.message_id
 
@@ -249,7 +260,11 @@ module Email
 
       email_size = 0
       post.uploads.each do |upload|
-        next if FileHelper.is_supported_image?(upload.original_filename)
+        if FileHelper.is_supported_image?(upload.original_filename) &&
+            !should_attach_image?(upload)
+          next
+        end
+
         next if email_size + upload.filesize > max_email_size
 
         begin
@@ -275,6 +290,12 @@ module Email
       end
 
       fix_parts_after_attachments!
+    end
+
+    def should_attach_image?(upload)
+      return if !SiteSetting.secure_media_allow_embed_images_in_emails || !upload.secure?
+      return if upload.filesize > SiteSetting.secure_media_max_email_embed_image_size_kb.kilobytes
+      true
     end
 
     #
@@ -311,8 +332,11 @@ module Email
         content = Mail::Part.new do
           content_type "multipart/alternative"
 
-          part html_part
-          part text_part
+          # we have to re-specify the charset and give the part the decoded body
+          # here otherwise the parts will get encoded with US-ASCII which makes
+          # a bunch of characters not render correctly in the email
+          part content_type: "text/html; charset=utf-8", body: html_part.body.decoded
+          part content_type: "text/plain; charset=utf-8", body: text_part.body.decoded
         end
 
         @message.parts.unshift(content)

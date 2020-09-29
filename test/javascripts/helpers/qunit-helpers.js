@@ -1,3 +1,4 @@
+import { Promise } from "rsvp";
 import { isEmpty } from "@ember/utils";
 import { later } from "@ember/runloop";
 /* global QUnit, resetSite */
@@ -8,7 +9,7 @@ import { forceMobile, resetMobile } from "discourse/lib/mobile";
 import { resetPluginApi } from "discourse/lib/plugin-api";
 import {
   clearCache as clearOutletCache,
-  resetExtraClasses
+  resetExtraClasses,
 } from "discourse/lib/plugin-connectors";
 import { clearHTMLCache } from "discourse/helpers/custom-html";
 import { flushMap } from "discourse/models/store";
@@ -26,6 +27,11 @@ import { _clearSnapshots } from "select-kit/components/composer-actions";
 import User from "discourse/models/user";
 import { mapRoutes } from "discourse/mapping-router";
 import { currentSettings, mergeSettings } from "helpers/site-settings";
+import { getOwner } from "discourse-common/lib/get-owner";
+import { setTopicList } from "discourse/lib/topic-list-tracker";
+import { setURLContainer } from "discourse/lib/url";
+import { setDefaultOwner } from "discourse-common/lib/get-owner";
+import bootbox from "bootbox";
 
 export function currentUser() {
   return User.create(sessionFixtures["/session/current.json"].current_user);
@@ -49,7 +55,7 @@ export function fakeTime(timeString, timezone = null, advanceTime = false) {
   let now = moment.tz(timeString, timezone);
   return sandbox.useFakeTimers({
     now: now.valueOf(),
-    shouldAdvanceTime: advanceTime
+    shouldAdvanceTime: advanceTime,
   });
 }
 
@@ -75,7 +81,7 @@ const Plugin = $.fn.modal;
 const Modal = Plugin.Constructor;
 
 function AcceptanceModal(option, _relatedTarget) {
-  return this.each(function() {
+  return this.each(function () {
     var $this = $(this);
     var data = $this.data("bs.modal");
     var options = $.extend(
@@ -85,22 +91,29 @@ function AcceptanceModal(option, _relatedTarget) {
       typeof option === "object" && option
     );
 
-    if (!data) $this.data("bs.modal", (data = new Modal(this, options)));
+    if (!data) {
+      $this.data("bs.modal", (data = new Modal(this, options)));
+    }
     data.$body = $("#ember-testing");
 
-    if (typeof option === "string") data[option](_relatedTarget);
-    else if (options.show) data.show(_relatedTarget);
+    if (typeof option === "string") {
+      data[option](_relatedTarget);
+    } else if (options.show) {
+      data.show(_relatedTarget);
+    }
   });
 }
 
-window.bootbox.$body = $("#ember-testing");
+bootbox.$body = $("#ember-testing");
 $.fn.modal = AcceptanceModal;
 
 let _pretenderCallbacks = {};
 
 export function applyPretender(name, server, helper) {
   const cb = _pretenderCallbacks[name];
-  if (cb) cb(server, helper);
+  if (cb) {
+    cb(server, helper);
+  }
 }
 
 export function controllerModule(name, args = {}) {
@@ -113,13 +126,14 @@ export function controllerModule(name, args = {}) {
         args.setupController(controller);
       }
     },
-    needs: args.needs
+    needs: args.needs,
   });
 }
 
 export function discourseModule(name, hooks) {
   QUnit.module(name, {
     beforeEach() {
+      this.container = getOwner(this);
       this.siteSettings = currentSettings();
       if (hooks && hooks.beforeEach) {
         hooks.beforeEach.call(this);
@@ -129,7 +143,7 @@ export function discourseModule(name, hooks) {
       if (hooks && hooks.afterEach) {
         hooks.afterEach.call(this);
       }
-    }
+    },
   });
 }
 
@@ -145,13 +159,9 @@ export function acceptance(name, options) {
       resetMobile();
 
       // For now don't do scrolling stuff in Test Mode
-      HeaderComponent.reopen({ examineDockHeader: function() {} });
+      HeaderComponent.reopen({ examineDockHeader: function () {} });
 
       resetExtraClasses();
-      if (options.beforeEach) {
-        options.beforeEach.call(this);
-      }
-
       if (options.mobileView) {
         forceMobile();
       }
@@ -165,14 +175,22 @@ export function acceptance(name, options) {
       }
       this.siteSettings = currentSettings();
 
+      clearOutletCache();
+      clearHTMLCache();
+      resetPluginApi();
+
       if (options.site) {
         resetSite(currentSettings(), options.site);
       }
 
-      clearOutletCache();
-      clearHTMLCache();
-      resetPluginApi();
       Discourse.reset();
+      this.container = getOwner(this);
+      setURLContainer(this.container);
+      setDefaultOwner(this.container);
+
+      if (options.beforeEach) {
+        options.beforeEach.call(this);
+      }
     },
 
     afterEach() {
@@ -196,25 +214,28 @@ export function acceptance(name, options) {
       resetUsernameDecorators();
       resetOneboxCache();
       resetCustomPostMessageCallbacks();
+      setTopicList(null);
       _clearSnapshots();
-      Discourse._runInitializer("instanceInitializers", function(
-        initName,
-        initializer
-      ) {
-        if (initializer && initializer.teardown) {
-          initializer.teardown(Discourse.__container__);
+      setURLContainer(null);
+      setDefaultOwner(null);
+      Discourse._runInitializer(
+        "instanceInitializers",
+        (initName, initializer) => {
+          if (initializer && initializer.teardown) {
+            initializer.teardown(this.container);
+          }
         }
-      });
+      );
       Discourse.reset();
 
       // We do this after reset so that the willClearRender will have already fired
       resetWidgetCleanCallbacks();
-    }
+    },
   });
 }
 
 export function controllerFor(controller, model) {
-  controller = Discourse.__container__.lookup("controller:" + controller);
+  controller = getOwner(this).lookup("controller:" + controller);
   if (model) {
     controller.set("model", model);
   }
@@ -228,36 +249,36 @@ export function fixture(selector) {
   return $("#qunit-fixture");
 }
 
-QUnit.assert.not = function(actual, message) {
+QUnit.assert.not = function (actual, message) {
   this.pushResult({
     result: !actual,
     actual,
     expected: !actual,
-    message
+    message,
   });
 };
 
-QUnit.assert.blank = function(actual, message) {
+QUnit.assert.blank = function (actual, message) {
   this.pushResult({
     result: isEmpty(actual),
     actual,
-    message
+    message,
   });
 };
 
-QUnit.assert.present = function(actual, message) {
+QUnit.assert.present = function (actual, message) {
   this.pushResult({
     result: !isEmpty(actual),
     actual,
-    message
+    message,
   });
 };
 
-QUnit.assert.containsInstance = function(collection, klass, message) {
-  const result = klass.detectInstance(_.first(collection));
+QUnit.assert.containsInstance = function (collection, klass, message) {
+  const result = klass.detectInstance(collection[0]);
   this.pushResult({
     result,
-    message
+    message,
   });
 };
 
@@ -269,4 +290,16 @@ export function waitFor(assert, callback, timeout) {
     callback();
     done();
   }, timeout);
+}
+
+export async function selectDate(selector, date) {
+  return new Promise((resolve) => {
+    const elem = document.querySelector(selector);
+    elem.value = date;
+    const evt = new Event("input", { bubbles: true, cancelable: false });
+    elem.dispatchEvent(evt);
+    elem.blur();
+
+    resolve();
+  });
 }

@@ -1134,11 +1134,11 @@ class UsersController < ApplicationController
       return render json: failed_json, status: 422
     end
 
-    unless SiteSetting.selectable_avatars[url]
+    unless upload = Upload.get_from_url(url)
       return render json: failed_json, status: 422
     end
 
-    unless upload = Upload.find_by(url: url)
+    unless SiteSetting.selectable_avatars[upload.sha1]
       return render json: failed_json, status: 422
     end
 
@@ -1385,6 +1385,7 @@ class UsersController < ApplicationController
   def disable_second_factor
     # delete all second factors for a user
     current_user.user_second_factors.destroy_all
+    current_user.security_keys.destroy_all
 
     Jobs.enqueue(
       :critical_user_email,

@@ -1645,6 +1645,7 @@ describe User do
     fab!(:category1) { Fabricate(:category) }
     fab!(:category2) { Fabricate(:category) }
     fab!(:category3) { Fabricate(:category) }
+    fab!(:category4) { Fabricate(:category) }
 
     before do
       SiteSetting.default_email_digest_frequency = 1440 # daily
@@ -1658,6 +1659,7 @@ describe User do
       SiteSetting.default_other_external_links_in_new_tab = true
       SiteSetting.default_other_enable_quoting = false
       SiteSetting.default_other_dynamic_favicon = true
+      SiteSetting.default_other_skip_new_user_tips = true
 
       SiteSetting.default_topics_automatic_unpin = false
 
@@ -1665,6 +1667,7 @@ describe User do
       SiteSetting.default_categories_tracking = category1.id.to_s
       SiteSetting.default_categories_muted = category2.id.to_s
       SiteSetting.default_categories_watching_first_post = category3.id.to_s
+      SiteSetting.default_categories_regular = category4.id.to_s
     end
 
     it "has overriden preferences" do
@@ -1677,6 +1680,7 @@ describe User do
       expect(options.external_links_in_new_tab).to eq(true)
       expect(options.enable_quoting).to eq(false)
       expect(options.dynamic_favicon).to eq(true)
+      expect(options.skip_new_user_tips).to eq(true)
       expect(options.automatically_unpin_topics).to eq(false)
       expect(options.new_topic_duration_minutes).to eq(-1)
       expect(options.auto_track_topics_after_msecs).to eq(0)
@@ -1686,6 +1690,7 @@ describe User do
       expect(CategoryUser.lookup(user, :tracking).pluck(:category_id)).to eq([category1.id])
       expect(CategoryUser.lookup(user, :muted).pluck(:category_id)).to eq([category2.id])
       expect(CategoryUser.lookup(user, :watching_first_post).pluck(:category_id)).to eq([category3.id])
+      expect(CategoryUser.lookup(user, :regular).pluck(:category_id)).to eq([category4.id])
     end
 
     it "does not set category preferences for staged users" do
@@ -1694,6 +1699,7 @@ describe User do
       expect(CategoryUser.lookup(user, :tracking).pluck(:category_id)).to eq([])
       expect(CategoryUser.lookup(user, :muted).pluck(:category_id)).to eq([])
       expect(CategoryUser.lookup(user, :watching_first_post).pluck(:category_id)).to eq([])
+      expect(CategoryUser.lookup(user, :regular).pluck(:category_id)).to eq([])
     end
   end
 
@@ -1757,6 +1763,14 @@ describe User do
     describe 'when user is an old user' do
       it 'should return the right value' do
         user.update!(first_seen_at: 1.year.ago)
+
+        expect(user.read_first_notification?).to eq(true)
+      end
+    end
+
+    describe 'when user skipped new user tips' do
+      it 'should return the right value' do
+        user.user_option.update!(skip_new_user_tips: true)
 
         expect(user.read_first_notification?).to eq(true)
       end
@@ -2415,6 +2429,56 @@ describe User do
       user = Fabricate(:user, username: "Löwe")
       expect(user.encoded_username).to eq("L%C3%B6we")
       expect(user.encoded_username(lower: true)).to eq("l%C3%B6we")
+    end
+  end
+
+  describe '#update_ip_address!' do
+    it 'updates ip_address correctly' do
+      expect do
+        user.update_ip_address!('127.0.0.1')
+      end.to change { user.reload.ip_address.to_s }.to('127.0.0.1')
+
+      expect do
+        user.update_ip_address!('127.0.0.1')
+      end.to_not change { user.reload.ip_address }
+    end
+
+    describe 'keeping old ip address' do
+      before do
+        SiteSetting.keep_old_ip_address_count = 2
+      end
+
+      it 'tracks old user record correctly' do
+        expect do
+          user.update_ip_address!('127.0.0.1')
+        end.to change { UserIpAddressHistory.where(user_id: user.id).count }.by(1)
+
+        freeze_time 10.minutes.from_now
+
+        expect do
+          user.update_ip_address!('0.0.0.0')
+        end.to change { UserIpAddressHistory.where(user_id: user.id).count }.by(1)
+
+        freeze_time 11.minutes.from_now
+
+        expect do
+          user.update_ip_address!('127.0.0.1')
+        end.to_not change { UserIpAddressHistory.where(user_id: user.id).count }
+
+        expect(UserIpAddressHistory.find_by(
+          user_id: user.id, ip_address: '127.0.0.1'
+        ).updated_at).to eq_time(Time.zone.now)
+
+        freeze_time 12.minutes.from_now
+
+        expect do
+          user.update_ip_address!('0.0.0.1')
+        end.to change { UserIpAddressHistory.where(user_id: user.id).count }.by(0)
+
+        expect(
+          UserIpAddressHistory.where(user_id: user.id).pluck(:ip_address).map(&:to_s)
+        ).to eq(['127.0.0.1', '0.0.0.1'])
+      end
     end
   end
 end

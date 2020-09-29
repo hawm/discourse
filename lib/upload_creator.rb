@@ -6,11 +6,14 @@ class UploadCreator
 
   TYPES_TO_CROP ||= %w{avatar card_background custom_emoji profile_background}.each(&:freeze)
 
-  WHITELISTED_SVG_ELEMENTS ||= %w{
+  ALLOWED_SVG_ELEMENTS ||= %w{
     circle clippath defs ellipse feGaussianBlur filter g line linearGradient
-    path polygon polyline radialGradient rect stop style svg text textpath
-    tref tspan use
+    marker path polygon polyline radialGradient rect stop style svg text
+    textpath tref tspan use
   }.each(&:freeze)
+
+  include ActiveSupport::Deprecation::DeprecatedConstantAccessor
+  deprecate_constant 'WHITELISTED_SVG_ELEMENTS', 'UploadCreator::ALLOWED_SVG_ELEMENTS'
 
   # Available options
   #  - type (string)
@@ -128,7 +131,7 @@ class UploadCreator
       add_metadata!
       return @upload unless @upload.save
 
-      DiscourseEvent.trigger(:before_upload_creation, @file, is_image)
+      DiscourseEvent.trigger(:before_upload_creation, @file, is_image, @opts[:for_export])
 
       # store the file and update its url
       File.open(@file.path) do |f|
@@ -168,6 +171,8 @@ class UploadCreator
       @upload.errors.add(:base, I18n.t("upload.empty"))
     elsif pixels == 0
       @upload.errors.add(:base, I18n.t("upload.images.size_not_found"))
+    elsif max_image_pixels > 0 && pixels >= max_image_pixels * 2
+      @upload.errors.add(:base, I18n.t("upload.images.larger_than_x_megapixels", max_image_megapixels: SiteSetting.max_image_megapixels * 2))
     end
   end
 
@@ -218,7 +223,7 @@ class UploadCreator
   end
 
   def convert_heif_to_jpeg?
-    SiteSetting.convert_heif_to_jpeg && File.extname(@filename).downcase.match?(/\.hei(f|c)$/)
+    File.extname(@filename).downcase.match?(/\.hei(f|c)$/)
   end
 
   def convert_heif!
@@ -401,7 +406,7 @@ class UploadCreator
   end
 
   def svg_allowlist_xpath
-    @@svg_allowlist_xpath ||= "//*[#{WHITELISTED_SVG_ELEMENTS.map { |e| "name()!='#{e}'" }.join(" and ") }]"
+    @@svg_allowlist_xpath ||= "//*[#{ALLOWED_SVG_ELEMENTS.map { |e| "name()!='#{e}'" }.join(" and ") }]"
   end
 
   def add_metadata!

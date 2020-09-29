@@ -3,29 +3,30 @@ import User from "discourse/models/user";
 import KeyboardShortcutInitializer from "discourse/initializers/keyboard-shortcuts";
 import { REMINDER_TYPES } from "discourse/lib/bookmark";
 import { fakeTime } from "helpers/qunit-helpers";
+
 let BookmarkController;
 
 moduleFor("controller:bookmark", {
   beforeEach() {
     logIn();
-    KeyboardShortcutInitializer.initialize(Discourse.__container__);
+    KeyboardShortcutInitializer.initialize(this.container);
     BookmarkController = this.subject({
       currentUser: User.current(),
-      site: { isMobileDevice: false }
+      site: { isMobileDevice: false },
     });
     BookmarkController.onShow();
   },
 
   afterEach() {
     sandbox.restore();
-  }
+  },
 });
 
 function mockMomentTz(dateString) {
   fakeTime(dateString, BookmarkController.userTimezone);
 }
 
-QUnit.test("showLaterToday when later today is tomorrow do not show", function(
+QUnit.test("showLaterToday when later today is tomorrow do not show", function (
   assert
 ) {
   mockMomentTz("2019-12-11T22:00:00");
@@ -35,13 +36,13 @@ QUnit.test("showLaterToday when later today is tomorrow do not show", function(
 
 QUnit.test(
   "showLaterToday when later today is after 5pm but before 6pm",
-  function(assert) {
+  function (assert) {
     mockMomentTz("2019-12-11T15:00:00");
     assert.equal(BookmarkController.get("showLaterToday"), true);
   }
 );
 
-QUnit.test("showLaterToday when now is after the cutoff time (5pm)", function(
+QUnit.test("showLaterToday when now is after the cutoff time (5pm)", function (
   assert
 ) {
   mockMomentTz("2019-12-11T17:00:00");
@@ -50,14 +51,14 @@ QUnit.test("showLaterToday when now is after the cutoff time (5pm)", function(
 
 QUnit.test(
   "showLaterToday when later today is before the end of the day, show",
-  function(assert) {
+  function (assert) {
     mockMomentTz("2019-12-11T10:00:00");
 
     assert.equal(BookmarkController.get("showLaterToday"), true);
   }
 );
 
-QUnit.test("nextWeek gets next week correctly", function(assert) {
+QUnit.test("nextWeek gets next week correctly", function (assert) {
   mockMomentTz("2019-12-11T08:00:00");
 
   assert.equal(
@@ -66,7 +67,7 @@ QUnit.test("nextWeek gets next week correctly", function(assert) {
   );
 });
 
-QUnit.test("nextMonth gets next month correctly", function(assert) {
+QUnit.test("nextMonth gets next month correctly", function (assert) {
   mockMomentTz("2019-12-11T08:00:00");
 
   assert.equal(
@@ -75,7 +76,7 @@ QUnit.test("nextMonth gets next month correctly", function(assert) {
   );
 });
 
-QUnit.test("laterThisWeek gets 2 days from now", function(assert) {
+QUnit.test("laterThisWeek gets 2 days from now", function (assert) {
   mockMomentTz("2019-12-10T08:00:00");
 
   assert.equal(
@@ -84,26 +85,27 @@ QUnit.test("laterThisWeek gets 2 days from now", function(assert) {
   );
 });
 
-QUnit.test("laterThisWeek returns null if we are at Thursday already", function(
-  assert
-) {
-  mockMomentTz("2019-12-12T08:00:00");
+QUnit.test(
+  "laterThisWeek returns null if we are at Thursday already",
+  function (assert) {
+    mockMomentTz("2019-12-12T08:00:00");
 
-  assert.equal(BookmarkController.laterThisWeek(), null);
-});
+    assert.equal(BookmarkController.laterThisWeek(), null);
+  }
+);
 
-QUnit.test("showLaterThisWeek returns true if < Thursday", function(assert) {
+QUnit.test("showLaterThisWeek returns true if < Thursday", function (assert) {
   mockMomentTz("2019-12-10T08:00:00");
 
   assert.equal(BookmarkController.showLaterThisWeek, true);
 });
 
-QUnit.test("showLaterThisWeek returns false if > Thursday", function(assert) {
+QUnit.test("showLaterThisWeek returns false if > Thursday", function (assert) {
   mockMomentTz("2019-12-12T08:00:00");
 
   assert.equal(BookmarkController.showLaterThisWeek, false);
 });
-QUnit.test("tomorrow gets tomorrow correctly", function(assert) {
+QUnit.test("tomorrow gets tomorrow correctly", function (assert) {
   mockMomentTz("2019-12-11T08:00:00");
 
   assert.equal(
@@ -114,7 +116,7 @@ QUnit.test("tomorrow gets tomorrow correctly", function(assert) {
 
 QUnit.test(
   "startOfDay changes the time of the provided date to 8:00am correctly",
-  function(assert) {
+  function (assert) {
     let dt = moment.tz(
       "2019-12-11T11:37:16",
       BookmarkController.currentUser.resolvedTimezone(
@@ -131,7 +133,7 @@ QUnit.test(
 
 QUnit.test(
   "laterToday gets 3 hours from now and if before half-past, it rounds down",
-  function(assert) {
+  function (assert) {
     mockMomentTz("2019-12-11T08:13:00");
 
     assert.equal(
@@ -143,7 +145,7 @@ QUnit.test(
 
 QUnit.test(
   "laterToday gets 3 hours from now and if after half-past, it rounds up to the next hour",
-  function(assert) {
+  function (assert) {
     mockMomentTz("2019-12-11T08:43:00");
 
     assert.equal(
@@ -155,7 +157,7 @@ QUnit.test(
 
 QUnit.test(
   "laterToday is capped to 6pm. later today at 3pm = 6pm, 3:30pm = 6pm, 4pm = 6pm, 4:59pm = 6pm",
-  function(assert) {
+  function (assert) {
     mockMomentTz("2019-12-11T15:00:00");
 
     assert.equal(
@@ -190,19 +192,19 @@ QUnit.test(
   }
 );
 
-QUnit.test("showLaterToday returns false if >= 5PM", function(assert) {
+QUnit.test("showLaterToday returns false if >= 5PM", function (assert) {
   mockMomentTz("2019-12-11T17:00:01");
   assert.equal(BookmarkController.showLaterToday, false);
 });
 
-QUnit.test("showLaterToday returns false if >= 5PM", function(assert) {
+QUnit.test("showLaterToday returns false if >= 5PM", function (assert) {
   mockMomentTz("2019-12-11T17:00:01");
   assert.equal(BookmarkController.showLaterToday, false);
 });
 
 QUnit.test(
   "reminderAt - custom - defaults to 8:00am if the time is not selected",
-  function(assert) {
+  function (assert) {
     BookmarkController.customReminderDate = "2028-12-12";
     BookmarkController.selectedReminderType =
       BookmarkController.reminderTypes.CUSTOM;
@@ -225,7 +227,7 @@ QUnit.test(
 
 QUnit.test(
   "loadLastUsedCustomReminderDatetime fills the custom reminder date + time if present in localStorage",
-  function(assert) {
+  function (assert) {
     mockMomentTz("2019-12-11T08:00:00");
     localStorage.lastCustomBookmarkReminderDate = "2019-12-12";
     localStorage.lastCustomBookmarkReminderTime = "08:00";
@@ -239,7 +241,7 @@ QUnit.test(
 
 QUnit.test(
   "loadLastUsedCustomReminderDatetime does not fills the custom reminder date + time if the datetime in localStorage is < now",
-  function(assert) {
+  function (assert) {
     mockMomentTz("2019-12-11T08:00:00");
     localStorage.lastCustomBookmarkReminderDate = "2019-12-11";
     localStorage.lastCustomBookmarkReminderTime = "07:00";
@@ -251,7 +253,7 @@ QUnit.test(
   }
 );
 
-QUnit.test("user timezone updates when the modal is shown", function(assert) {
+QUnit.test("user timezone updates when the modal is shown", function (assert) {
   User.current().changeTimezone(null);
   let stub = sandbox.stub(moment.tz, "guess").returns("Europe/Moscow");
   BookmarkController.onShow();
@@ -274,7 +276,7 @@ QUnit.test("user timezone updates when the modal is shown", function(assert) {
 
 QUnit.test(
   "opening the modal with an existing bookmark with reminder at prefills the custom reminder type",
-  function(assert) {
+  function (assert) {
     let name = "test";
     let reminderAt = "2020-05-15T09:45:00";
     BookmarkController.model = { id: 1, name: name, reminderAt: reminderAt };

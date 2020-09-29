@@ -15,6 +15,11 @@ export default {
       );
     }
 
+    // We are still using these for now
+    DiscourseURL.rewrite(/^\/group\//, "/groups/");
+    DiscourseURL.rewrite(/^\/groups$/, "/g");
+    DiscourseURL.rewrite(/^\/groups\//, "/g/");
+
     // Initialize default homepage
     let siteSettings = container.lookup("site-settings:main");
     initializeDefaultHomepage(siteSettings);
@@ -24,8 +29,8 @@ export default {
         "/u/account-created",
         "/users/account-created",
         "/u/password-reset",
-        "/users/password-reset"
-      ]
+        "/users/password-reset",
+      ],
     });
-  }
+  },
 };

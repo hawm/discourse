@@ -8,36 +8,29 @@ componentTest("highlighting code", {
   template: "{{highlighted-code lang='ruby' code=code}}",
 
   beforeEach() {
-    Discourse.HighlightJSPath =
+    this.session.highlightJsPath =
       "assets/highlightjs/highlight-test-bundle.min.js";
     this.set("code", "def test; end");
   },
 
-  async test(assert) {
+  test(assert) {
     assert.equal(
-      find("code.ruby.hljs .hljs-function .hljs-keyword")
-        .text()
-        .trim(),
+      find("code.ruby.hljs .hljs-function .hljs-keyword").text().trim(),
       "def"
     );
-  }
+  },
 });
 
 componentTest("large code blocks are not highlighted", {
   template: "{{highlighted-code lang='ruby' code=code}}",
 
   beforeEach() {
-    Discourse.HighlightJSPath =
+    this.session.highlightJsPath =
       "assets/highlightjs/highlight-test-bundle.min.js";
     this.set("code", LONG_CODE_BLOCK);
   },
 
-  async test(assert) {
-    assert.equal(
-      find("code")
-        .text()
-        .trim(),
-      LONG_CODE_BLOCK.trim()
-    );
-  }
+  test(assert) {
+    assert.equal(find("code").text().trim(), LONG_CODE_BLOCK.trim());
+  },
 });

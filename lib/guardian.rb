@@ -93,6 +93,15 @@ class Guardian
     @user.moderator?
   end
 
+  def is_category_group_moderator?(category)
+    @is_category_group_moderator ||= begin
+      SiteSetting.enable_category_group_moderation? &&
+        category.present? &&
+        category.reviewable_by_group_id.present? &&
+        GroupUser.where(group_id: category.reviewable_by_group_id, user_id: @user.id).exists?
+    end
+  end
+
   def is_silenced?
     @user.silenced?
   end
@@ -163,7 +172,6 @@ class Guardian
   def can_moderate?(obj)
     obj && authenticated? && !is_silenced? && (is_staff? || (obj.is_a?(Topic) && @user.has_trust_level?(TrustLevel[4])))
   end
-  alias :can_move_posts? :can_moderate?
   alias :can_see_flags? :can_moderate?
 
   def can_tag?(topic)
@@ -198,6 +206,7 @@ class Guardian
     return false if group.blank?
     return true if is_admin? || group.members_visibility_level == Group.visibility_levels[:public]
     return true if is_staff? && group.members_visibility_level == Group.visibility_levels[:staff]
+    return true if is_staff? && group.members_visibility_level == Group.visibility_levels[:members]
     return true if authenticated? && group.members_visibility_level == Group.visibility_levels[:logged_on_users]
     return false if user.blank?
 
@@ -214,6 +223,7 @@ class Guardian
     return false if groups.blank?
     return true if is_admin? || groups.all? { |g| g.visibility_level == Group.visibility_levels[:public] }
     return true if is_staff? && groups.all? { |g| g.visibility_level == Group.visibility_levels[:staff] }
+    return true if is_staff? && groups.all? { |g| g.visibility_level == Group.visibility_levels[:members] }
     return true if authenticated? && groups.all? { |g| g.visibility_level == Group.visibility_levels[:logged_on_users] }
     return false if user.blank?
 

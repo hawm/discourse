@@ -57,6 +57,7 @@ class UserOption < ActiveRecord::Base
     self.enable_defer = SiteSetting.default_other_enable_defer
     self.external_links_in_new_tab = SiteSetting.default_other_external_links_in_new_tab
     self.dynamic_favicon = SiteSetting.default_other_dynamic_favicon
+    self.skip_new_user_tips = SiteSetting.default_other_skip_new_user_tips
 
     self.new_topic_duration_minutes = SiteSetting.default_other_new_topic_duration_minutes
     self.auto_track_topics_after_msecs = SiteSetting.default_other_auto_track_topics_after_msecs
@@ -162,6 +163,7 @@ class UserOption < ActiveRecord::Base
     when 3 then "unread"
     when 4 then "new"
     when 5 then "top"
+    when 6 then "bookmarks"
     else SiteSetting.homepage
     end
   end
@@ -235,6 +237,9 @@ end
 #  enable_defer                     :boolean          default(FALSE), not null
 #  timezone                         :string
 #  enable_allowed_pm_users          :boolean          default(FALSE), not null
+#  dark_scheme_id                   :integer
+#  skip_new_user_tips               :boolean          default(FALSE), not null
+#  color_scheme_id                  :integer
 #
 # Indexes
 #

@@ -31,6 +31,7 @@ class ApplicationController < ActionController::Base
   before_action :check_readonly_mode
   before_action :handle_theme
   before_action :set_current_user_for_logs
+  before_action :set_mp_snapshot_fields
   before_action :clear_notifications
   around_action :with_resolved_locale
   before_action :set_mobile_view
@@ -47,16 +48,6 @@ class ApplicationController < ActionController::Base
   after_action  :conditionally_allow_site_embedding
 
   layout :set_layout
-
-  if Rails.env == "development"
-    after_action :remember_theme_id
-
-    def remember_theme_id
-      if @theme_ids.present? && request.format == "html"
-        Stylesheet::Watcher.theme_id = @theme_ids.first if defined? Stylesheet::Watcher
-      end
-    end
-  end
 
   def has_escaped_fragment?
     SiteSetting.enable_escaped_fragments? && params.key?("_escaped_fragment_")
@@ -110,7 +101,7 @@ class ApplicationController < ActionController::Base
   class PluginDisabled < StandardError; end
 
   rescue_from RenderEmpty do
-    render 'default/empty'
+    with_resolved_locale { render 'default/empty' }
   end
 
   rescue_from ArgumentError do |e|
@@ -303,6 +294,12 @@ class ApplicationController < ActionController::Base
       response.headers["X-Discourse-Username"] = current_user.username
     end
     response.headers["X-Discourse-Route"] = "#{controller_name}/#{action_name}"
+  end
+
+  def set_mp_snapshot_fields
+    if defined?(Rack::MiniProfiler)
+      Rack::MiniProfiler.add_snapshot_custom_field("application version", Discourse.git_version)
+    end
   end
 
   def clear_notifications
@@ -710,11 +707,11 @@ class ApplicationController < ActionController::Base
   def redirect_to_login
     dont_cache_page
 
-    if SiteSetting.enable_sso?
+    if SiteSetting.external_auth_immediately && SiteSetting.enable_sso?
       # save original URL in a session so we can redirect after login
       session[:destination_url] = destination_url
       redirect_to path('/session/sso')
-    elsif !SiteSetting.enable_local_logins && Discourse.enabled_authenticators.length == 1 && !cookies[:authentication_data]
+    elsif SiteSetting.external_auth_immediately && !SiteSetting.enable_local_logins && Discourse.enabled_authenticators.length == 1 && !cookies[:authentication_data]
       # Only one authentication provider, direct straight to it.
       # If authentication_data is present, then we are halfway though registration. Don't redirect offsite
       cookies[:destination_url] = destination_url
@@ -785,7 +782,9 @@ class ApplicationController < ActionController::Base
       opts[:layout] = 'application' if opts[:layout] == 'no_ember'
     end
 
-    if !SiteSetting.login_required? || (current_user rescue false)
+    @current_user = current_user rescue nil
+
+    if !SiteSetting.login_required? || @current_user
       key = "page_not_found_topics"
       if @topics_partial = Discourse.redis.get(key)
         @topics_partial = @topics_partial.html_safe

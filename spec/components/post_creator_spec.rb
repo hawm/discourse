@@ -391,6 +391,26 @@ describe PostCreator do
               expect(topic.closed).to eq(true)
               expect(topic_timer.reload.deleted_at).to eq_time(Time.zone.now)
             end
+
+            it "uses the system locale for the message" do
+              post
+
+              I18n.with_locale(:fr) do
+                PostCreator.new(
+                  topic.user,
+                  topic_id: topic.id,
+                  raw: "this is a second post"
+                ).create
+              end
+
+              topic.reload
+
+              expect(topic.posts.last.raw).to eq(I18n.t(
+                'topic_statuses.autoclosed_topic_max_posts',
+                count: SiteSetting.auto_close_topics_post_count,
+                locale: :en
+              ))
+            end
           end
         end
       end
@@ -406,7 +426,7 @@ describe PostCreator do
 
           it "doesn't create tags" do
             expect { @post = creator_with_tags.create }.to change { Tag.count }.by(0)
-            expect(@post.topic.tags.size).to eq(0)
+            expect(@post.topic&.tags&.size).to eq(nil)
           end
         end
 
@@ -653,12 +673,22 @@ describe PostCreator do
       before do
         Fabricate(:bookmark, topic: topic, user: user, auto_delete_preference: Bookmark.auto_delete_preferences[:on_owner_reply])
         Fabricate(:bookmark, topic: topic, user: user, auto_delete_preference: Bookmark.auto_delete_preferences[:on_owner_reply])
+        TopicUser.create!(topic: topic, user: user, bookmarked: true)
+      end
+
+      it "deletes the bookmarks, but not the ones without an auto_delete_preference" do
         Fabricate(:bookmark, topic: topic, user: user)
         Fabricate(:bookmark, user: user)
-      end
-      it "deletes the bookmarks" do
         creator.create
         expect(Bookmark.where(user: user).count).to eq(2)
+        expect(TopicUser.find_by(topic: topic, user: user).bookmarked).to eq(true)
+      end
+
+      context "when there are no bookmarks left in the topic" do
+        it "sets TopicUser.bookmarked to false" do
+          creator.create
+          expect(TopicUser.find_by(topic: topic, user: user).bookmarked).to eq(false)
+        end
       end
     end
 
@@ -1561,20 +1591,10 @@ describe PostCreator do
     fab!(:public_topic) { Fabricate(:topic) }
 
     before do
-      SiteSetting.enable_s3_uploads = true
+      setup_s3
       SiteSetting.authorized_extensions = "png|jpg|gif|mp4"
-      SiteSetting.s3_upload_bucket = "s3-upload-bucket"
-      SiteSetting.s3_access_key_id = "some key"
-      SiteSetting.s3_secret_access_key = "some secret key"
-      SiteSetting.s3_region = "us-east-1"
       SiteSetting.secure_media = true
-
-      stub_request(:head, "https://#{SiteSetting.s3_upload_bucket}.s3.amazonaws.com/")
-
-      stub_request(
-        :put,
-        "https://#{SiteSetting.s3_upload_bucket}.s3.amazonaws.com/original/1X/#{image_upload.sha1}.#{image_upload.extension}?acl"
-      )
+      stub_upload(image_upload)
     end
 
     it "links post uploads" do

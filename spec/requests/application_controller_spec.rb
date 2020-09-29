@@ -45,6 +45,24 @@ RSpec.describe ApplicationController do
       expect(response).to redirect_to("/login")
     end
 
+    it "should not redirect to SSO when external_auth_immediately is disabled" do
+      SiteSetting.external_auth_immediately = false
+      SiteSetting.sso_url = 'http://someurl.com'
+      SiteSetting.enable_sso = true
+
+      get "/"
+      expect(response).to redirect_to("/login")
+    end
+
+    it "should not redirect to authenticator when external_auth_immediately is disabled" do
+      SiteSetting.external_auth_immediately = false
+      SiteSetting.enable_google_oauth2_logins = true
+      SiteSetting.enable_local_logins = false
+
+      get "/"
+      expect(response).to redirect_to("/login")
+    end
+
     context "with omniauth in test mode" do
       before do
         OmniAuth.config.test_mode = true
@@ -687,8 +705,9 @@ RSpec.describe ApplicationController do
         end
 
         context "with a logged in user" do
+          let(:user) { Fabricate(:user, locale: :fr) }
+
           before do
-            user = Fabricate(:user, locale: :fr)
             sign_in(user)
           end
 
@@ -703,6 +722,12 @@ RSpec.describe ApplicationController do
             expect(response.status).to eq(404)
             expected_title = I18n.t("page_not_found.title", locale: :fr)
             expect(response.body).to include(CGI.escapeHTML(expected_title))
+          end
+
+          it "serves a RenderEmpty page in the preferred locale" do
+            get "/u/#{user.username}/preferences/interface"
+            expect(response.status).to eq(200)
+            expect(response.body).to have_tag('script', with: { src: "/assets/locales/fr.js" })
           end
         end
       end

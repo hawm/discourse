@@ -5,7 +5,7 @@ import { discourseModule } from "helpers/qunit-helpers";
 
 discourseModule("lib:emoji");
 
-QUnit.test("emojiUnescape", function(assert) {
+QUnit.test("emojiUnescape", function (assert) {
   const testUnescape = (input, expected, description, settings = {}) => {
     const originalSettings = {};
     for (const [key, value] of Object.entries(settings)) {
@@ -32,12 +32,12 @@ QUnit.test("emojiUnescape", function(assert) {
   );
   testUnescape(
     "emoticons :)",
-    `emoticons <img src='/images/emoji/emoji_one/slight_smile.png?v=${v}' title='slight_smile' alt='slight_smile' class='emoji'>`,
+    `emoticons <img width=\"20\" height=\"20\" src='/images/emoji/emoji_one/slight_smile.png?v=${v}' title='slight_smile' alt='slight_smile' class='emoji'>`,
     "emoticons are still supported"
   );
   testUnescape(
     "With emoji :O: :frog: :smile:",
-    `With emoji <img src='/images/emoji/emoji_one/o.png?v=${v}' title='O' alt='O' class='emoji'> <img src='/images/emoji/emoji_one/frog.png?v=${v}' title='frog' alt='frog' class='emoji'> <img src='/images/emoji/emoji_one/smile.png?v=${v}' title='smile' alt='smile' class='emoji'>`,
+    `With emoji <img width=\"20\" height=\"20\" src='/images/emoji/emoji_one/o.png?v=${v}' title='O' alt='O' class='emoji'> <img width=\"20\" height=\"20\" src='/images/emoji/emoji_one/frog.png?v=${v}' title='frog' alt='frog' class='emoji'> <img width=\"20\" height=\"20\" src='/images/emoji/emoji_one/smile.png?v=${v}' title='smile' alt='smile' class='emoji'>`,
     "title with emoji"
   );
   testUnescape(
@@ -47,27 +47,27 @@ QUnit.test("emojiUnescape", function(assert) {
   );
   testUnescape(
     "(:frog:) :)",
-    `(<img src='/images/emoji/emoji_one/frog.png?v=${v}' title='frog' alt='frog' class='emoji'>) <img src='/images/emoji/emoji_one/slight_smile.png?v=${v}' title='slight_smile' alt='slight_smile' class='emoji'>`,
+    `(<img width=\"20\" height=\"20\" src='/images/emoji/emoji_one/frog.png?v=${v}' title='frog' alt='frog' class='emoji'>) <img width=\"20\" height=\"20\" src='/images/emoji/emoji_one/slight_smile.png?v=${v}' title='slight_smile' alt='slight_smile' class='emoji'>`,
     "non-word characters allowed next to emoji"
   );
   testUnescape(
     ":smile: hi",
-    `<img src='/images/emoji/emoji_one/smile.png?v=${v}' title='smile' alt='smile' class='emoji'> hi`,
+    `<img width=\"20\" height=\"20\" src='/images/emoji/emoji_one/smile.png?v=${v}' title='smile' alt='smile' class='emoji'> hi`,
     "start of line"
   );
   testUnescape(
     "hi :smile:",
-    `hi <img src='/images/emoji/emoji_one/smile.png?v=${v}' title='smile' alt='smile' class='emoji'>`,
+    `hi <img width=\"20\" height=\"20\" src='/images/emoji/emoji_one/smile.png?v=${v}' title='smile' alt='smile' class='emoji'>`,
     "end of line"
   );
   testUnescape(
     "hi :blonde_woman:t4:",
-    `hi <img src='/images/emoji/emoji_one/blonde_woman/4.png?v=${v}' title='blonde_woman:t4' alt='blonde_woman:t4' class='emoji'>`,
+    `hi <img width=\"20\" height=\"20\" src='/images/emoji/emoji_one/blonde_woman/4.png?v=${v}' title='blonde_woman:t4' alt='blonde_woman:t4' class='emoji'>`,
     "support for skin tones"
   );
   testUnescape(
     "hi :blonde_woman:t4: :blonde_man:t6:",
-    `hi <img src='/images/emoji/emoji_one/blonde_woman/4.png?v=${v}' title='blonde_woman:t4' alt='blonde_woman:t4' class='emoji'> <img src='/images/emoji/emoji_one/blonde_man/6.png?v=${v}' title='blonde_man:t6' alt='blonde_man:t6' class='emoji'>`,
+    `hi <img width=\"20\" height=\"20\" src='/images/emoji/emoji_one/blonde_woman/4.png?v=${v}' title='blonde_woman:t4' alt='blonde_woman:t4' class='emoji'> <img width=\"20\" height=\"20\" src='/images/emoji/emoji_one/blonde_man/6.png?v=${v}' title='blonde_man:t6' alt='blonde_man:t6' class='emoji'>`,
     "support for multiple skin tones"
   );
   testUnescape(
@@ -95,7 +95,7 @@ QUnit.test("emojiUnescape", function(assert) {
   );
   testUnescape(
     "Hello 😊 World",
-    `Hello <img src='/images/emoji/emoji_one/blush.png?v=${v}' title='blush' alt='blush' class='emoji'> World`,
+    `Hello <img width=\"20\" height=\"20\" src='/images/emoji/emoji_one/blush.png?v=${v}' title='blush' alt='blush' class='emoji'> World`,
     "emoji from Unicode emoji"
   );
   testUnescape(
@@ -103,15 +103,15 @@ QUnit.test("emojiUnescape", function(assert) {
     "Hello😊World",
     "keeps Unicode emoji when inline translation disabled",
     {
-      enable_inline_emoji_translation: false
+      enable_inline_emoji_translation: false,
     }
   );
   testUnescape(
     "Hello😊World",
-    `Hello<img src='/images/emoji/emoji_one/blush.png?v=${v}' title='blush' alt='blush' class='emoji'>World`,
+    `Hello<img width=\"20\" height=\"20\" src='/images/emoji/emoji_one/blush.png?v=${v}' title='blush' alt='blush' class='emoji'>World`,
     "emoji from Unicode emoji when inline translation enabled",
     {
-      enable_inline_emoji_translation: true
+      enable_inline_emoji_translation: true,
     }
   );
   testUnescape(
@@ -119,18 +119,18 @@ QUnit.test("emojiUnescape", function(assert) {
     "hi:smile:",
     "no emojis when inline translation disabled",
     {
-      enable_inline_emoji_translation: false
+      enable_inline_emoji_translation: false,
     }
   );
   testUnescape(
     "hi:smile:",
-    `hi<img src='/images/emoji/emoji_one/smile.png?v=${v}' title='smile' alt='smile' class='emoji'>`,
+    `hi<img width=\"20\" height=\"20\" src='/images/emoji/emoji_one/smile.png?v=${v}' title='smile' alt='smile' class='emoji'>`,
     "emoji when inline translation enabled",
     { enable_inline_emoji_translation: true }
   );
 });
 
-QUnit.test("Emoji search", assert => {
+QUnit.test("Emoji search", (assert) => {
   // able to find an alias
   assert.equal(emojiSearch("+1").length, 1);
 

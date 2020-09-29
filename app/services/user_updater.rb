@@ -6,6 +6,7 @@ class UserUpdater
     watched_first_post_category_ids: :watching_first_post,
     watched_category_ids: :watching,
     tracked_category_ids: :tracking,
+    regular_category_ids: :regular,
     muted_category_ids: :muted
   }
 
@@ -25,6 +26,8 @@ class UserUpdater
     :external_links_in_new_tab,
     :enable_quoting,
     :enable_defer,
+    :color_scheme_id,
+    :dark_scheme_id,
     :dynamic_favicon,
     :automatically_unpin_topics,
     :digest_after_minutes,
@@ -42,7 +45,8 @@ class UserUpdater
     :hide_profile_and_presence,
     :text_size,
     :title_count_mode,
-    :timezone
+    :timezone,
+    :skip_new_user_tips
   ]
 
   def initialize(actor, user)
@@ -66,13 +70,13 @@ class UserUpdater
       user_profile.website = format_url(attributes.fetch(:website) { user_profile.website })
     end
 
-    if attributes[:profile_background_upload_url] == ""
+    if attributes[:profile_background_upload_url] == "" || !guardian.can_upload_profile_header?(user)
       user_profile.profile_background_upload_id = nil
     elsif upload = Upload.get_from_url(attributes[:profile_background_upload_url])
       user_profile.profile_background_upload_id = upload.id
     end
 
-    if attributes[:card_background_upload_url] == ""
+    if attributes[:card_background_upload_url] == "" || !guardian.can_upload_user_card_background?(user)
       user_profile.card_background_upload_id = nil
     elsif upload = Upload.get_from_url(attributes[:card_background_upload_url])
       user_profile.card_background_upload_id = upload.id
@@ -231,11 +235,10 @@ class UserUpdater
   end
 
   def update_allowed_pm_users(usernames)
-    #return unless guardian.can_ignore_users?
-
     usernames ||= ""
     desired_usernames = usernames.split(",").reject { |username| user.username == username }
-    desired_ids = User.where(username: desired_usernames).where(admin: false, moderator: false).pluck(:id)
+    desired_ids = User.where(username: desired_usernames).pluck(:id)
+
     if desired_ids.empty?
       AllowedPmUser.where(user_id: user.id).destroy_all
     else

@@ -7,7 +7,7 @@ import {
   allowsAttachments,
   authorizedExtensions,
   authorizesAllExtensions,
-  uploadIcon
+  uploadIcon,
 } from "discourse/lib/uploads";
 
 export default Controller.extend(ModalFunctionality, {
@@ -42,7 +42,7 @@ export default Controller.extend(ModalFunctionality, {
       ? ""
       : `(${authorizedExtensions(this.currentUser.staff, this.siteSettings)})`;
     return I18n.t(this.uploadTranslate(`${selection}_tip`), {
-      authorized_extensions
+      authorized_extensions,
     });
   },
 
@@ -50,19 +50,19 @@ export default Controller.extend(ModalFunctionality, {
     upload() {
       if (this.local) {
         $(".wmd-controls").fileupload("add", {
-          fileInput: $("#filename-input")
+          fileInput: $("#filename-input"),
         });
       } else {
         const imageUrl = this.imageUrl || "";
         const toolbarEvent = this.toolbarEvent;
 
-        if (imageUrl.match(/\.(jpg|jpeg|png|gif)$/)) {
+        if (imageUrl.match(/\.(jpg|jpeg|png|gif|heic|heif)$/)) {
           toolbarEvent.addText(`![](${imageUrl})`);
         } else {
           toolbarEvent.addText(imageUrl);
         }
       }
       this.send("closeModal");
-    }
-  }
+    },
+  },
 });

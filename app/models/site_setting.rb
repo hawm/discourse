@@ -183,6 +183,9 @@ class SiteSetting < ActiveRecord::Base
     site_logo_small_url
     site_mobile_logo_url
     site_favicon_url
+    site_logo_dark_url
+    site_logo_small_dark_url
+    site_mobile_logo_dark_url
   }.each { |client_setting| client_settings << client_setting }
 
   %i{
@@ -190,6 +193,9 @@ class SiteSetting < ActiveRecord::Base
     logo_small
     digest_logo
     mobile_logo
+    logo_dark
+    logo_small_dark
+    mobile_logo_dark
     large_icon
     manifest_icon
     favicon
@@ -236,11 +242,11 @@ class SiteSetting < ActiveRecord::Base
   }
 
   ALLOWLIST_DEPRECATED_SITE_SETTINGS.each_pair do |old_method, new_method|
-    self.class.define_method(old_method) do
+    self.define_singleton_method(old_method) do
       Discourse.deprecate("#{old_method.to_s} is deprecated, use the #{new_method.to_s}.", drop_from: "2.6")
       send(new_method)
     end
-    self.class.define_method("#{old_method}=") do |args|
+    self.define_singleton_method("#{old_method}=") do |args|
       Discourse.deprecate("#{old_method.to_s} is deprecated, use the #{new_method.to_s}.", drop_from: "2.6")
       send("#{new_method}=", args)
     end

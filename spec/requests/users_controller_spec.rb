@@ -2377,6 +2377,17 @@ describe UsersController do
             expect(user.reload.uploaded_avatar_id).to eq(avatar1.id)
             expect(user.user_avatar.reload.custom_upload_id).to eq(avatar1.id)
           end
+
+          it 'can succesfully select an avatar using a cooked URL' do
+            events = DiscourseEvent.track_events do
+              put "/u/#{user.username}/preferences/avatar/select.json", params: { url: UrlHelper.cook_url(avatar1.url) }
+            end
+
+            expect(events.map { |event| event[:event_name] }).to include(:user_updated)
+            expect(response.status).to eq(200)
+            expect(user.reload.uploaded_avatar_id).to eq(avatar1.id)
+            expect(user.user_avatar.reload.custom_upload_id).to eq(avatar1.id)
+          end
         end
       end
     end
@@ -4065,6 +4076,32 @@ describe UsersController do
 
         expect(user.security_keys.count).to eq(0)
         expect(response.parsed_body["error"]).to eq(I18n.t("webauthn.validation.invalid_type_error"))
+      end
+    end
+  end
+
+  describe '#disable_second_factor' do
+    context 'when logged in with secure session' do
+      before do
+        sign_in(user)
+        stub_secure_session_confirmed
+      end
+      context 'when user has a registered totp and security key' do
+        before do
+          totp_second_factor = Fabricate(:user_second_factor_totp, user: user)
+          security_key_second_factor = Fabricate(:user_security_key, user: user, factor_type: UserSecurityKey.factor_types[:second_factor])
+        end
+
+        it 'should disable all totp and security keys' do
+          expect_enqueued_with(job: :critical_user_email, args: { type: :account_second_factor_disabled, user_id: user.id }) do
+            put "/u/disable_second_factor.json"
+
+            expect(response.status).to eq(200)
+
+            expect(user.reload.user_second_factors).to be_empty
+            expect(user.security_keys).to be_empty
+          end
+        end
       end
     end
   end

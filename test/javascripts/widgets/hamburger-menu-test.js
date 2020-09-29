@@ -19,7 +19,7 @@ widgetTest("prioritize faq", {
   test(assert) {
     assert.ok(find(".faq-priority").length);
     assert.ok(!find(".faq-link").length);
-  }
+  },
 });
 
 widgetTest("prioritize faq - user has read", {
@@ -33,7 +33,7 @@ widgetTest("prioritize faq - user has read", {
   test(assert) {
     assert.ok(!find(".faq-priority").length);
     assert.ok(find(".faq-link").length);
-  }
+  },
 });
 
 widgetTest("staff menu - not staff", {
@@ -45,25 +45,21 @@ widgetTest("staff menu - not staff", {
 
   test(assert) {
     assert.ok(!find(".admin-link").length);
-  }
+  },
 });
 
-widgetTest("staff menu", {
+widgetTest("staff menu - moderator", {
   template: '{{mount-widget widget="hamburger-menu"}}',
 
   beforeEach() {
-    this.currentUser.setProperties({
-      moderator: true,
-      reviewable_count: 3
-    });
+    this.currentUser.set("moderator", true);
   },
 
   test(assert) {
     assert.ok(find(".admin-link").length);
     assert.ok(find(".review").length);
-    assert.equal(find(".reviewables").text(), "3");
     assert.ok(!find(".settings-link").length);
-  }
+  },
 });
 
 widgetTest("staff menu - admin", {
@@ -75,22 +71,7 @@ widgetTest("staff menu - admin", {
 
   test(assert) {
     assert.ok(find(".settings-link").length);
-  }
-});
-
-widgetTest("reviewable content", {
-  template: '{{mount-widget widget="hamburger-menu"}}',
-
-  beforeEach() {
-    this.currentUser.setProperties({
-      moderator: true,
-      reviewable_count: 5
-    });
   },
-
-  test(assert) {
-    assert.equal(find(".reviewables").text(), "5");
-  }
 });
 
 widgetTest("logged in links", {
@@ -99,7 +80,7 @@ widgetTest("logged in links", {
   test(assert) {
     assert.ok(find(".new-topics-link").length);
     assert.ok(find(".unread-topics-link").length);
-  }
+  },
 });
 
 widgetTest("general links", {
@@ -114,7 +95,7 @@ widgetTest("general links", {
     assert.ok(find(".top-topics-link").length);
     assert.ok(find(".badge-link").length);
     assert.ok(find(".category-link").length > 0);
-  }
+  },
 });
 
 let maxCategoriesToDisplay;
@@ -134,10 +115,10 @@ widgetTest("top categories - anonymous", {
       this.site
         .get("categoriesByCount")
         .slice(0, 8)
-        .map(c => c.name)
+        .map((c) => c.name)
         .join("")
     );
-  }
+  },
 });
 
 widgetTest("top categories - allow_uncategorized_topics", {
@@ -155,12 +136,12 @@ widgetTest("top categories - allow_uncategorized_topics", {
       find(".category-link .category-name").text(),
       this.site
         .get("categoriesByCount")
-        .filter(c => c.name !== "uncategorized")
+        .filter((c) => c.name !== "uncategorized")
         .slice(0, 8)
-        .map(c => c.name)
+        .map((c) => c.name)
         .join("")
     );
-  }
+  },
 });
 
 widgetTest("top categories", {
@@ -170,7 +151,7 @@ widgetTest("top categories", {
     this.siteSettings.header_dropdown_category_count = 8;
     maxCategoriesToDisplay = this.siteSettings.header_dropdown_category_count;
     categoriesByCount = this.site.get("categoriesByCount").slice();
-    categoriesByCount.every(c => {
+    categoriesByCount.every((c) => {
       if (!topCategoryIds.includes(c.id)) {
         if (mutedCategoryIds.length === 0) {
           mutedCategoryIds.push(c.id);
@@ -182,7 +163,7 @@ widgetTest("top categories", {
               category_id: c.id,
               last_read_post_number: 1,
               highest_post_number: 2,
-              notification_level: NotificationLevels.TRACKING
+              notification_level: NotificationLevels.TRACKING,
             };
           }
         } else {
@@ -190,7 +171,7 @@ widgetTest("top categories", {
           for (let i = 0; i < 10; i++) {
             c.topicTrackingState.states["t321" + i] = {
               category_id: c.id,
-              last_read_post_number: null
+              last_read_post_number: null,
             };
           }
           return false;
@@ -205,21 +186,21 @@ widgetTest("top categories", {
     assert.equal(find(".category-link").length, maxCategoriesToDisplay);
 
     categoriesByCount = categoriesByCount.filter(
-      c => !mutedCategoryIds.includes(c.id)
+      (c) => !mutedCategoryIds.includes(c.id)
     );
     let ids = [
       ...unreadCategoryIds,
       ...topCategoryIds,
-      ...categoriesByCount.map(c => c.id)
+      ...categoriesByCount.map((c) => c.id),
     ]
       .uniq()
       .slice(0, maxCategoriesToDisplay);
 
     assert.equal(
       find(".category-link .category-name").text(),
-      ids.map(i => categoriesByCount.find(c => c.id === i).name).join("")
+      ids.map((i) => categoriesByCount.find((c) => c.id === i).name).join("")
     );
-  }
+  },
 });
 
 widgetTest("badges link - disabled", {
@@ -231,7 +212,7 @@ widgetTest("badges link - disabled", {
 
   test(assert) {
     assert.ok(!find(".badge-link").length);
-  }
+  },
 });
 
 widgetTest("badges link", {
@@ -239,7 +220,7 @@ widgetTest("badges link", {
 
   test(assert) {
     assert.ok(find(".badge-link").length);
-  }
+  },
 });
 
 widgetTest("user directory link", {
@@ -247,7 +228,7 @@ widgetTest("user directory link", {
 
   test(assert) {
     assert.ok(find(".user-directory-link").length);
-  }
+  },
 });
 
 widgetTest("user directory link - disabled", {
@@ -259,7 +240,7 @@ widgetTest("user directory link - disabled", {
 
   test(assert) {
     assert.ok(!find(".user-directory-link").length);
-  }
+  },
 });
 
 widgetTest("general links", {
@@ -268,5 +249,5 @@ widgetTest("general links", {
   test(assert) {
     assert.ok(find(".about-link").length);
     assert.ok(find(".keyboard-shortcuts-link").length);
-  }
+  },
 });

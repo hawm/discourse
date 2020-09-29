@@ -351,7 +351,8 @@ class PostCreator
         :closed, true, Discourse.system_user,
         message: I18n.t(
           'topic_statuses.autoclosed_message_max_posts',
-          count: SiteSetting.auto_close_messages_post_count
+          count: SiteSetting.auto_close_messages_post_count,
+          locale: SiteSetting.default_locale
         )
       )
     elsif !is_private_message &&
@@ -363,7 +364,8 @@ class PostCreator
         :closed, true, Discourse.system_user,
         message: I18n.t(
           'topic_statuses.autoclosed_topic_max_posts',
-          count: SiteSetting.auto_close_topics_post_count
+          count: SiteSetting.auto_close_topics_post_count,
+          locale: SiteSetting.default_locale
         )
       )
     end
@@ -405,10 +407,11 @@ class PostCreator
 
   def delete_owned_bookmarks
     return if !@post.topic_id
-    @user.bookmarks.where(
-      topic_id: @post.topic_id,
-      auto_delete_preference: Bookmark.auto_delete_preferences[:on_owner_reply]
-    ).destroy_all
+    BookmarkManager.new(@user).destroy_for_topic(
+      Topic.with_deleted.find(@post.topic_id),
+      { auto_delete_preference: Bookmark.auto_delete_preferences[:on_owner_reply] },
+      @opts
+    )
   end
 
   def handle_spam

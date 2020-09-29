@@ -92,7 +92,8 @@ Discourse::Application.routes.draw do
       get "reports/bulk" => "reports#bulk"
       get "reports/:type" => "reports#show"
 
-      resources :groups, constraints: AdminConstraint.new do
+      resources :groups, only: [:create]
+      resources :groups, except: [:create], constraints: AdminConstraint.new do
         collection do
           get 'bulk'
           get 'bulk-complete' => 'groups#bulk'
@@ -143,6 +144,7 @@ Discourse::Application.routes.draw do
         post "merge"
         post "reset_bounce_score"
         put "disable_second_factor"
+        delete "sso_record"
       end
       get "users/:id.json" => 'users#show', defaults: { format: 'json' }
       get 'users/:id/:username' => 'users#show', constraints: { username: RouteFormat.username }
@@ -338,6 +340,7 @@ Discourse::Application.routes.draw do
     get "review" => "reviewables#index" # For ember app
     get "review/:reviewable_id" => "reviewables#show", constraints: { reviewable_id: /\d+/ }
     get "review/:reviewable_id/explain" => "reviewables#explain", constraints: { reviewable_id: /\d+/ }
+    get "review/count" => "reviewables#count"
     get "review/topics" => "reviewables#topics"
     get "review/settings" => "reviewables#settings"
     put "review/settings" => "reviewables#settings"
@@ -516,6 +519,7 @@ Discourse::Application.routes.draw do
 
     get "stylesheets/:name.css.map" => "stylesheets#show_source_map", constraints: { name: /[-a-z0-9_]+/ }
     get "stylesheets/:name.css" => "stylesheets#show", constraints: { name: /[-a-z0-9_]+/ }
+    get "color-scheme-stylesheet/:id(/:theme_id)" => "stylesheets#color_scheme", constraints: { format: :json }
     get "theme-javascripts/:digest.js" => "theme_javascripts#show", constraints: { digest: /\h{40}/ }
 
     post "uploads/lookup-metadata" => "uploads#metadata"
@@ -559,7 +563,7 @@ Discourse::Application.routes.draw do
 
         collection do
           get "check-name" => 'groups#check_name'
-          get 'custom/new' => 'groups#new', constraints: AdminConstraint.new
+          get 'custom/new' => 'groups#new', constraints: StaffConstraint.new
           get "search" => "groups#search"
         end
 
@@ -577,11 +581,14 @@ Discourse::Application.routes.draw do
             manage/membership
             manage/interaction
             manage/email
+            manage/categories
+            manage/tags
             manage/logs
           }.each do |path|
             get path => 'groups#show'
           end
 
+          get "permissions" => "groups#permissions"
           put "members" => "groups#add_members"
           delete "members" => "groups#remove_member"
           post "request_membership" => "groups#request_membership"
