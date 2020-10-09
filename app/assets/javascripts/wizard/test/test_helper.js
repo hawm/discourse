@@ -6,12 +6,15 @@
 //= require ember.debug
 //= require locales/i18n
 //= require locales/en_US
+//= require route-recognizer/dist/route-recognizer
+//= require fake_xml_http_request
+//= require pretender/pretender
+//= require qunit/qunit/qunit
+//= require ember-qunit
 //= require discourse-loader
 //= require jquery.debug
 //= require handlebars
 //= require ember-template-compiler
-//= require qunit/qunit/qunit
-//= require ember-qunit
 //= require wizard-application
 //= require wizard-vendor
 //= require helpers/assertions
@@ -19,9 +22,6 @@
 //= require_tree ./acceptance
 //= require_tree ./models
 //= require_tree ./components
-//= require fake_xml_http_request
-//= require route-recognizer/dist/route-recognizer
-//= require pretender/pretender
 //= require ./wizard-pretender
 
 // Trick JSHint into allow document.write
