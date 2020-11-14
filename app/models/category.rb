@@ -724,7 +724,7 @@ class Category < ActiveRecord::Base
   end
 
   def full_slug(separator = "-")
-    start_idx = "#{Discourse.base_uri}/c/".size
+    start_idx = "#{Discourse.base_path}/c/".size
     url[start_idx..-1].gsub("/", separator)
   end
 
@@ -735,7 +735,7 @@ class Category < ActiveRecord::Base
   end
 
   def url
-    @@url_cache[self.id] ||= "#{Discourse.base_uri}/c/#{slug_path.join('/')}/#{self.id}"
+    @@url_cache[self.id] ||= "#{Discourse.base_path}/c/#{slug_path.join('/')}/#{self.id}"
   end
 
   def url_with_id
@@ -756,7 +756,7 @@ class Category < ActiveRecord::Base
   def create_category_permalink
     old_slug = saved_changes.transform_values(&:first)["slug"]
 
-    url = +"#{Discourse.base_uri}/c"
+    url = +"#{Discourse.base_path}/c"
     url << "/#{parent_category.slug_path.join('/')}" if parent_category_id
     url << "/#{old_slug}/#{id}"
     url = Permalink.normalize_url(url)
@@ -778,11 +778,10 @@ class Category < ActiveRecord::Base
   end
 
   def index_search
-    if saved_change_to_attribute?(:name)
-      SearchIndexer.queue_category_posts_reindex(self.id)
-    end
-
-    SearchIndexer.index(self)
+    Jobs.enqueue(:index_category_for_search,
+      category_id: self.id,
+      force: saved_change_to_attribute?(:name),
+    )
   end
 
   def update_reviewables
@@ -808,6 +807,17 @@ class Category < ActiveRecord::Base
       end
 
     Category.find_by_id(query)
+  end
+
+  def self.find_by_slug_path_with_id(slug_path_with_id)
+    slug_path = slug_path_with_id.split("/")
+
+    if slug_path.last =~ /\A\d+\Z/
+      id = slug_path.pop.to_i
+      Category.find_by_id(id)
+    else
+      Category.find_by_slug_path(slug_path)
+    end
   end
 
   def self.find_by_slug(category_slug, parent_category_slug = nil)
@@ -998,9 +1008,9 @@ end
 # Indexes
 #
 #  index_categories_on_email_in                (email_in) UNIQUE
+#  index_categories_on_forum_thread_count      (topic_count)
 #  index_categories_on_reviewable_by_group_id  (reviewable_by_group_id)
 #  index_categories_on_search_priority         (search_priority)
-#  index_categories_on_topic_count             (topic_count)
 #  unique_index_categories_on_name             (COALESCE(parent_category_id, '-1'::integer), name) UNIQUE
 #  unique_index_categories_on_slug             (COALESCE(parent_category_id, '-1'::integer), slug) UNIQUE WHERE ((slug)::text <> ''::text)
 #

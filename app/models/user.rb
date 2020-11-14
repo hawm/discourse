@@ -40,7 +40,6 @@ class User < ActiveRecord::Base
 
   has_one :user_option, dependent: :destroy
   has_one :user_avatar, dependent: :destroy
-  has_one :github_user_info, dependent: :destroy
   has_one :primary_email, -> { where(primary: true)  }, class_name: 'UserEmail', dependent: :destroy
   has_one :user_stat, dependent: :destroy
   has_one :user_profile, dependent: :destroy, inverse_of: :user
@@ -826,14 +825,14 @@ class User < ActiveRecord::Base
     # TODO it may be worth caching this in a distributed cache, should be benched
     if SiteSetting.external_system_avatars_enabled
       url = SiteSetting.external_system_avatars_url.dup
-      url = +"#{Discourse::base_uri}#{url}" unless url =~ /^https?:\/\//
+      url = +"#{Discourse.base_path}#{url}" unless url =~ /^https?:\/\//
       url.gsub! "{color}", letter_avatar_color(normalized_username)
       url.gsub! "{username}", UrlHelper.encode_component(username)
       url.gsub! "{first_letter}", UrlHelper.encode_component(normalized_username.grapheme_clusters.first)
       url.gsub! "{hostname}", Discourse.current_hostname
       url
     else
-      "#{Discourse.base_uri}/letter_avatar/#{normalized_username}/{size}/#{LetterAvatar.version}.png"
+      "#{Discourse.base_path}/letter_avatar/#{normalized_username}/{size}/#{LetterAvatar.version}.png"
     end
   end
 
@@ -1193,13 +1192,10 @@ class User < ActiveRecord::Base
   end
 
   def set_random_avatar
-    if SiteSetting.selectable_avatars_enabled? && SiteSetting.selectable_avatars.present?
-      urls = SiteSetting.selectable_avatars.split("\n")
-      if urls.present?
-        if upload = Upload.get_from_url(urls.sample)
-          update_column(:uploaded_avatar_id, upload.id)
-          UserAvatar.create!(user_id: id, custom_upload_id: upload.id)
-        end
+    if SiteSetting.selectable_avatars_enabled?
+      if upload = SiteSetting.selectable_avatars.sample
+        update_column(:uploaded_avatar_id, upload.id)
+        UserAvatar.create!(user_id: id, custom_upload_id: upload.id)
       end
     end
   end

@@ -305,7 +305,10 @@ class ApplicationController < ActionController::Base
 
   def set_mp_snapshot_fields
     if defined?(Rack::MiniProfiler)
-      Rack::MiniProfiler.add_snapshot_custom_field("application version", Discourse.git_version)
+      Rack::MiniProfiler.add_snapshot_custom_field("Application version", Discourse.git_version)
+      if Rack::MiniProfiler.snapshots_transporter?
+        Rack::MiniProfiler.add_snapshot_custom_field("Site", Discourse.current_hostname)
+      end
     end
   end
 
@@ -329,7 +332,7 @@ class ApplicationController < ActionController::Base
         current_user.reload
         current_user.publish_notifications_state
         cookie_args = {}
-        cookie_args[:path] = Discourse.base_uri if Discourse.base_uri.present?
+        cookie_args[:path] = Discourse.base_path if Discourse.base_path.present?
         cookies.delete('cn', cookie_args)
       end
     end
@@ -499,7 +502,14 @@ class ApplicationController < ActionController::Base
       result.find_by(find_opts)
     elsif params[:external_id]
       external_id = params[:external_id].chomp('.json')
-      SingleSignOnRecord.find_by(external_id: external_id).try(:user)
+      if provider_name = params[:external_provider]
+        raise Discourse::InvalidAccess unless guardian.is_admin? # external_id might be something sensitive
+        provider = Discourse.enabled_authenticators.find { |a| a.name == provider_name }
+        raise Discourse::NotFound if !provider&.is_managed? # Only managed authenticators use UserAssociatedAccount
+        UserAssociatedAccount.find_by(provider_name: provider_name, provider_uid: external_id)&.user
+      else
+        SingleSignOnRecord.find_by(external_id: external_id).try(:user)
+      end
     end
     raise Discourse::NotFound if user.blank?
 

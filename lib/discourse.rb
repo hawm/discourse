@@ -325,7 +325,6 @@ module Discourse
     Auth::AuthProvider.new(authenticator: Auth::GoogleOAuth2Authenticator.new, frame_width: 850, frame_height: 500), # Custom icon implemented in client
     Auth::AuthProvider.new(authenticator: Auth::GithubAuthenticator.new, icon: "fab-github"),
     Auth::AuthProvider.new(authenticator: Auth::TwitterAuthenticator.new, icon: "fab-twitter"),
-    Auth::AuthProvider.new(authenticator: Auth::InstagramAuthenticator.new, icon: "fab-instagram"),
     Auth::AuthProvider.new(authenticator: Auth::DiscordAuthenticator.new, icon: "fab-discord")
   ]
 
@@ -380,8 +379,13 @@ module Discourse
     SiteSetting.force_hostname.presence || RailsMultisite::ConnectionManagement.current_hostname
   end
 
-  def self.base_uri(default_value = "")
+  def self.base_path(default_value = "")
     ActionController::Base.config.relative_url_root.presence || default_value
+  end
+
+  def self.base_uri(default_value = "")
+    deprecate("Discourse.base_uri is deprecated, use Discourse.base_path instead")
+    base_path(default_value)
   end
 
   def self.base_protocol
@@ -401,7 +405,7 @@ module Discourse
   end
 
   def self.base_url
-    base_url_no_prefix + base_uri
+    base_url_no_prefix + base_path
   end
 
   def self.route_for(uri)
@@ -415,8 +419,8 @@ module Discourse
     return unless uri
 
     path = +(uri.path || "")
-    if !uri.host || (uri.host == Discourse.current_hostname && path.start_with?(Discourse.base_uri))
-      path.slice!(Discourse.base_uri)
+    if !uri.host || (uri.host == Discourse.current_hostname && path.start_with?(Discourse.base_path))
+      path.slice!(Discourse.base_path)
       return Rails.application.routes.recognize_path(path)
     end
 
@@ -426,7 +430,6 @@ module Discourse
   end
 
   class << self
-    alias_method :base_path, :base_uri
     alias_method :base_url_no_path, :base_url_no_prefix
   end
 
@@ -445,6 +448,10 @@ module Discourse
   ]
 
   def self.enable_readonly_mode(key = READONLY_MODE_KEY)
+    if key == PG_READONLY_MODE_KEY || key == PG_FORCE_READONLY_MODE_KEY
+      Sidekiq.pause!("pg_failover") if !Sidekiq.paused?
+    end
+
     if key == USER_READONLY_MODE_KEY || key == PG_FORCE_READONLY_MODE_KEY
       Discourse.redis.set(key, 1)
     else
@@ -494,6 +501,10 @@ module Discourse
   end
 
   def self.disable_readonly_mode(key = READONLY_MODE_KEY)
+    if key == PG_READONLY_MODE_KEY || key == PG_FORCE_READONLY_MODE_KEY
+      Sidekiq.unpause! if Sidekiq.paused?
+    end
+
     Discourse.redis.del(key)
     MessageBus.publish(readonly_channel, false)
     true
@@ -502,7 +513,6 @@ module Discourse
   def self.enable_pg_force_readonly_mode
     RailsMultisite::ConnectionManagement.each_connection do
       enable_readonly_mode(PG_FORCE_READONLY_MODE_KEY)
-      Sidekiq.pause!("pg_failover") if !Sidekiq.paused?
     end
 
     true
@@ -511,7 +521,6 @@ module Discourse
   def self.disable_pg_force_readonly_mode
     RailsMultisite::ConnectionManagement.each_connection do
       disable_readonly_mode(PG_FORCE_READONLY_MODE_KEY)
-      Sidekiq.unpause!
     end
 
     true

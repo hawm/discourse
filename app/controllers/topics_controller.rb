@@ -28,7 +28,8 @@ class TopicsController < ApplicationController
     :convert_topic,
     :bookmark,
     :publish,
-    :reset_bump_date
+    :reset_bump_date,
+    :set_slow_mode
   ]
 
   before_action :consider_user_for_promotion, only: :show
@@ -453,7 +454,6 @@ class TopicsController < ApplicationController
     params.require(:duration) if based_on_last_post
 
     topic = Topic.find_by(id: params[:topic_id])
-    guardian.ensure_can_see!(topic)
     guardian.ensure_can_moderate!(topic)
 
     options = {
@@ -931,6 +931,15 @@ class TopicsController < ApplicationController
 
     topic.reset_bumped_at
     render body: nil
+  end
+
+  def set_slow_mode
+    topic = Topic.find(params[:topic_id])
+
+    guardian.ensure_can_moderate!(topic)
+    topic.update!(slow_mode_seconds: params[:seconds])
+
+    head :ok
   end
 
   private

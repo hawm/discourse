@@ -32,6 +32,12 @@ const SELECT_KIT_OPTIONS = Mixin.create({
   selectKitOptions: EMPTY_OBJECT,
 });
 
+function isDocumentRTL() {
+  return (
+    window.getComputedStyle(document.querySelector("html")).direction === "rtl"
+  );
+}
+
 export default Component.extend(
   SELECT_KIT_OPTIONS,
   PluginApiMixin,
@@ -42,7 +48,7 @@ export default Component.extend(
     classNameBindings: [
       "selectKit.isLoading:is-loading",
       "selectKit.isExpanded:is-expanded",
-      "selectKit.isDisabled:is-disabled",
+      "selectKit.options.disabled:is-disabled",
       "selectKit.isHidden:is-hidden",
       "selectKit.hasSelection:has-selection",
     ],
@@ -178,8 +184,6 @@ export default Component.extend(
     didUpdateAttrs() {
       this._super(...arguments);
 
-      this.set("selectKit.isDisabled", this.isDisabled || false);
-
       this.handleDeprecations();
     },
 
@@ -270,7 +274,7 @@ export default Component.extend(
       clearOnClick: false,
       closeOnChange: true,
       limitMatches: null,
-      placement: "bottom-start",
+      placement: isDocumentRTL() ? "bottom-end" : "bottom-start",
       placementStrategy: null,
       filterComponent: "select-kit/select-kit-filter",
       selectedNameComponent: "selected-name",
@@ -985,7 +989,7 @@ export default Component.extend(
         allowUncategorized: "options.allowUncategorized",
         none: "options.none",
         rootNone: "options.none",
-        isDisabled: "options.isDisabled",
+        disabled: "options.disabled",
         rootNoneLabel: "options.none",
         showFullTitle: "options.showFullTitle",
         title: "options.translatedNone",

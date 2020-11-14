@@ -273,13 +273,15 @@ describe TopicView do
       let!(:post) { Fabricate(:post, topic: topic, user: user) }
       let!(:post2) { Fabricate(:post, topic: topic, user: user) }
       let!(:post3) { Fabricate(:post, topic: topic, user: user) }
+      let!(:post4) { Fabricate(:post, topic: topic, user: user) }
+      let!(:post5) { Fabricate(:post, topic: topic, user: user) }
 
       before do
         TopicView.stubs(:chunk_size).returns(2)
       end
 
       it "should return the next page" do
-        expect(TopicView.new(topic.id, user).next_page).to eql(2)
+        expect(TopicView.new(topic.id, user, { post_number: post.post_number }).next_page).to eql(3)
       end
     end
 
@@ -791,6 +793,32 @@ describe TopicView do
         expect(topic_view_for_post(2).image_url).to eq(nil)
         expect(topic_view_for_post(3).image_url).to end_with(post3_upload.url)
       end
+    end
+  end
+
+  describe '#show_read_indicator?' do
+    let(:topic) { Fabricate(:topic) }
+    let(:pm_topic) { Fabricate(:private_message_topic) }
+
+    it "shows read indicator for private messages" do
+      group = Fabricate(:group, users: [admin], publish_read_state: true)
+      pm_topic.topic_allowed_groups = [Fabricate.build(:topic_allowed_group, group: group)]
+
+      topic_view = TopicView.new(pm_topic.id, admin)
+      expect(topic_view.show_read_indicator?).to be_truthy
+    end
+
+    it "does not show read indicator if groups do not have read indicator enabled" do
+      topic_view = TopicView.new(pm_topic.id, admin)
+      expect(topic_view.show_read_indicator?).to be_falsey
+    end
+
+    it "does not show read indicator for topics with allowed groups" do
+      group = Fabricate(:group, users: [admin], publish_read_state: true)
+      topic.topic_allowed_groups = [Fabricate.build(:topic_allowed_group, group: group)]
+
+      topic_view = TopicView.new(topic.id, admin)
+      expect(topic_view.show_read_indicator?).to be_falsey
     end
   end
 end

@@ -139,8 +139,8 @@ const AdminUser = User.extend({
           bootbox.hideAll();
           let error;
           AdminUser.find(user.get("id")).then((u) => user.setProperties(u));
-          if (e.responseJSON && e.responseJSON.errors) {
-            error = e.responseJSON.errors[0];
+          if (e.jqXHR.responseJSON && e.jqXHR.responseJSON.errors) {
+            error = e.jqXHR.responseJSON.errors[0];
           }
           error = error || I18n.t("admin.user.delete_posts_failed");
           bootbox.alert(error);
@@ -236,8 +236,8 @@ const AdminUser = User.extend({
       .then(() => window.location.reload())
       .catch((e) => {
         let error;
-        if (e.responseJSON && e.responseJSON.errors) {
-          error = e.responseJSON.errors[0];
+        if (e.jqXHR.responseJSON && e.jqXHR.responseJSON.errors) {
+          error = e.jqXHR.responseJSON.errors[0];
         }
         error =
           error ||
@@ -260,8 +260,8 @@ const AdminUser = User.extend({
       .then(() => window.location.reload())
       .catch((e) => {
         let error;
-        if (e.responseJSON && e.responseJSON.errors) {
-          error = e.responseJSON.errors[0];
+        if (e.jqXHR.responseJSON && e.jqXHR.responseJSON.errors) {
+          error = e.jqXHR.responseJSON.errors[0];
         }
         error =
           error ||
@@ -352,28 +352,17 @@ const AdminUser = User.extend({
       type: "PUT",
     })
       .then((result) => this.setProperties(result.unsilence))
-      .catch((e) => {
-        const error = I18n.t("admin.user.unsilence_failed", {
-          error: this._formatError(e),
-        });
-        bootbox.alert(error);
-      })
       .finally(() => this.set("silencingUser", false));
   },
 
   silence(data) {
     this.set("silencingUser", true);
+
     return ajax(`/admin/users/${this.id}/silence`, {
       type: "PUT",
       data,
     })
       .then((result) => this.setProperties(result.silence))
-      .catch((e) => {
-        const error = I18n.t("admin.user.silence_failed", {
-          error: this._formatError(e),
-        });
-        bootbox.alert(error);
-      })
       .finally(() => this.set("silencingUser", false));
   },
 

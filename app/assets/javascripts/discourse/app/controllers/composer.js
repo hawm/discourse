@@ -28,6 +28,11 @@ import { isTesting } from "discourse-common/config/environment";
 import EmberObject, { computed, action } from "@ember/object";
 import deprecated from "discourse-common/lib/deprecated";
 import bootbox from "bootbox";
+import showModal from "discourse/lib/show-modal";
+import {
+  cannotPostAgain,
+  durationTextFromSeconds,
+} from "discourse/helpers/slow-mode";
 
 function loadDraft(store, opts) {
   let promise = Promise.resolve();
@@ -546,8 +551,8 @@ export default Controller.extend({
       this.cancelComposer(differentDraftContext);
     },
 
-    save() {
-      this.save();
+    save(ignore, event) {
+      this.save(false, { jump: !(event && event.shiftKey) });
     },
 
     displayEditReason() {
@@ -584,7 +589,7 @@ export default Controller.extend({
           if (group.max_mentions < group.user_count) {
             body = I18n.t("composer.group_mentioned_limit", {
               group: `@${group.name}`,
-              max: group.max_mentions,
+              count: group.max_mentions,
               group_link: groupLink,
             });
           } else if (group.user_count > 0) {
@@ -625,7 +630,7 @@ export default Controller.extend({
 
   disableSubmit: or("model.loading", "isUploading"),
 
-  save(force) {
+  save(force, options = {}) {
     if (this.disableSubmit) {
       return;
     }
@@ -644,6 +649,32 @@ export default Controller.extend({
     if (composer.cantSubmitPost) {
       this.set("lastValidatedAt", Date.now());
       return;
+    }
+
+    const topic = composer.topic;
+    const slowModePost =
+      topic && topic.slow_mode_seconds && topic.user_last_posted_at;
+    const notEditing = this.get("model.action") !== "edit";
+
+    // Editing a topic in slow mode is directly handled by the backend.
+    if (slowModePost && notEditing) {
+      if (
+        cannotPostAgain(
+          this.currentUser,
+          topic.slow_mode_seconds,
+          topic.user_last_posted_at
+        )
+      ) {
+        const message = I18n.t("composer.slow_mode.error", {
+          duration: durationTextFromSeconds(topic.slow_mode_seconds),
+        });
+
+        bootbox.alert(message);
+        return;
+      } else {
+        // Edge case where the user tries to post again immediately.
+        topic.set("user_last_posted_at", new Date().toISOString());
+      }
     }
 
     composer.set("disableDrafts", true);
@@ -763,7 +794,8 @@ export default Controller.extend({
         this.currentUser.set("any_posts", true);
 
         const post = result.target;
-        if (post && !staged) {
+
+        if (post && !staged && options.jump !== false) {
           DiscourseURL.routeTo(post.url, { skipIfOnScreen: true });
         }
       })
@@ -1066,46 +1098,36 @@ export default Controller.extend({
       cancel(this._saveDraftDebounce);
     }
 
-    const keyPrefix =
-      this.model.action === "edit" ? "post.abandon_edit" : "post.abandon";
-
     let promise = new Promise((resolve, reject) => {
       if (this.get("model.hasMetaData") || this.get("model.replyDirty")) {
-        bootbox.dialog(I18n.t(keyPrefix + ".confirm"), [
-          {
-            label: differentDraft
-              ? I18n.t(keyPrefix + ".no_save_draft")
-              : I18n.t(keyPrefix + ".no_value"),
-            callback: () => {
-              // cancel composer without destroying draft on new draft context
-              if (differentDraft) {
+        const controller = showModal("discard-draft", {
+          model: this.model,
+          modalClass: "discard-draft-modal",
+          title: "post.abandon.title",
+        });
+        controller.setProperties({
+          differentDraft,
+          onDestroyDraft: () => {
+            this.destroyDraft()
+              .then(() => {
                 this.model.clearState();
                 this.close();
+              })
+              .finally(() => {
                 resolve();
-              }
+              });
+          },
+          onSaveDraft: () => {
+            // cancel composer without destroying draft on new draft context
+            if (differentDraft) {
+              this.model.clearState();
+              this.close();
+              resolve();
+            }
 
-              reject();
-            },
+            reject();
           },
-          {
-            label: I18n.t(keyPrefix + ".yes_value"),
-            class: "btn-danger",
-            callback: (result) => {
-              if (result) {
-                this.destroyDraft()
-                  .then(() => {
-                    this.model.clearState();
-                    this.close();
-                  })
-                  .finally(() => {
-                    resolve();
-                  });
-              } else {
-                resolve();
-              }
-            },
-          },
-        ]);
+        });
       } else {
         // it is possible there is some sort of crazy draft with no body ... just give up on it
         this.destroyDraft()

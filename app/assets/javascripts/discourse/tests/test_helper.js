@@ -1,6 +1,5 @@
 // discourse-skip-module
 
-/*global document, sinon, QUnit, Logster */
 //= require env
 //= require jquery.debug
 //= require jquery.ui.widget
@@ -41,9 +40,17 @@
 //= require_tree ../../admin/tests/admin
 //= require plugin_tests
 //= require setup-tests
-//= require_self
-//
+//= require test-shims
 //= require jquery.magnific-popup.min.js
 
+document.write(
+  '<div id="ember-testing-container"><div id="ember-testing"></div></div>'
+);
+document.write(
+  "<style>#ember-testing-container { position: absolute; background: white; bottom: 0; right: 0; width: 640px; height: 384px; overflow: auto; z-index: 9999; border: 1px solid #ccc; } #ember-testing { zoom: 50%; }</style>"
+);
+
+let app = window.Discourse;
+app.injectTestHelpers();
 let setupTests = require("discourse/tests/setup-tests").default;
-setupTests(window.Discourse);
+setupTests(app, app.__container__);

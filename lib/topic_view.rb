@@ -35,7 +35,7 @@ class TopicView
   end
 
   def self.default_post_custom_fields
-    @default_post_custom_fields ||= [Post::NOTICE_TYPE, Post::NOTICE_ARGS, "action_code_who"]
+    @default_post_custom_fields ||= [Post::NOTICE, "action_code_who"]
   end
 
   def self.post_custom_fields_allowlisters
@@ -66,7 +66,6 @@ class TopicView
     end
 
     @post_number = [@post_number.to_i, 1].max
-    @page = [@page.to_i, 1].max
 
     @include_suggested = options.fetch(:include_suggested) { true }
     @include_related = options.fetch(:include_related) { true }
@@ -78,6 +77,8 @@ class TopicView
       end
 
     @limit ||= @chunk_size
+
+    @page = @page.to_i > 1 ? @page.to_i : calculate_page
 
     setup_filtered_posts
 
@@ -105,7 +106,7 @@ class TopicView
   end
 
   def show_read_indicator?
-    return false unless @user || topic.private_message?
+    return false if !@user || !topic.private_message?
 
     topic.allowed_groups.any? do |group|
       group.publish_read_state? && group.users.include?(@user)
@@ -118,15 +119,7 @@ class TopicView
       return topic_embed.embed_url if topic_embed
     end
     path = relative_url.dup
-    path <<
-      if @page > 1
-        "?page=#{@page}"
-      else
-        posts_count = is_mega_topic? ? @post_number : unfiltered_posts.where("post_number <= ?", @post_number).count
-        page = ((posts_count - 1) / @limit) + 1
-        page > 1 ? "?page=#{page}" : ""
-      end
-
+    path << ((@page > 1) ? "?page=#{@page}" : "")
     path
   end
 
@@ -356,8 +349,12 @@ class TopicView
   end
 
   def first_post_bookmark_reminder_at
-    @topic.posts.with_deleted.where(post_number: 1).first
-      .bookmarks.where(user: @user).pluck_first(:reminder_at)
+    @first_post_bookmark_reminder_at ||= \
+      begin
+        first_post = @topic.posts.with_deleted.find_by(post_number: 1)
+        return if !first_post
+        first_post.bookmarks.where(user: @user).pluck_first(:reminder_at)
+      end
   end
 
   MAX_PARTICIPANTS = 24
@@ -640,6 +637,11 @@ class TopicView
 
   private
 
+  def calculate_page
+    posts_count = is_mega_topic? ? @post_number : unfiltered_posts.where("post_number <= ?", @post_number).count
+    ((posts_count - 1) / @limit) + 1
+  end
+
   def get_sort_order(post_number)
     sql = <<~SQL
       SELECT posts.sort_order
@@ -702,7 +704,7 @@ class TopicView
       .includes({ user: :primary_group }, :reply_to_user, :deleted_by, :incoming_email, :topic)
       .order('sort_order')
     @posts = filter_post_types(@posts)
-    @posts = @posts.with_deleted if @guardian.can_see_deleted_posts?
+    @posts = @posts.with_deleted if @guardian.can_see_deleted_posts?(@topic.category)
     @posts
   end
 
@@ -718,7 +720,7 @@ class TopicView
 
   def unfiltered_posts
     result = filter_post_types(@topic.posts)
-    result = result.with_deleted if @guardian.can_see_deleted_posts?
+    result = result.with_deleted if @guardian.can_see_deleted_posts?(@topic.category)
     result = result.where("user_id IS NOT NULL") if @exclude_deleted_users
     result = result.where(hidden: false) if @exclude_hidden
     result
@@ -774,7 +776,7 @@ class TopicView
     # copy the filter for has_deleted? method
     @predelete_filtered_posts = @filtered_posts.spawn
 
-    if @guardian.can_see_deleted_posts? && !@show_deleted && has_deleted?
+    if @guardian.can_see_deleted_posts?(@topic.category) && !@show_deleted && has_deleted?
       @filtered_posts = @filtered_posts.where(
         "posts.deleted_at IS NULL OR posts.post_number = 1"
       )

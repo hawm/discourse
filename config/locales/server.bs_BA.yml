@@ -56,7 +56,6 @@ bs_BA:
     compile_error:
       unrecognized_extension: "Neprepoznata ekstenzija datoteke: %{extension}"
     import_error:
-      generic: Došlo je do pogreške prilikom uvoza te teme
       about_json_values: "o .json sadrži nevažeće vrijednosti: %{errors}"
       git: "Greška prilikom kloniranja git repository-a, pristup je odbijen ili repositroy nije pronađen."
       unpack_failed: "Otpakivanje datoteke nije uspelo"
@@ -310,16 +309,12 @@ bs_BA:
     off_topic:
       title: "Nije Relevantno"
       description: "Ovaj post iz korjena mjenja tok ove teme i najvjerovatnije bi ga trebalo premjestiti. Ako je ovo prvi post to jest sama tema, onda mu najvjerovatnije nije mjesto ovde."
-      long_form: "opomeni kao ne-relevantno"
     spam:
       title: "Spam"
-      long_form: "opomeni kao spam"
       email_body: "%{link}\n\n%{message}"
     inappropriate:
       title: "Neprikladno"
-      long_form: "opomeni kao neprikladno"
     notify_user:
-      long_form: "korisnik obavješten"
       email_title: 'Tvoj post u temi "%{title}"'
       email_body: "%{link}\n\n%{message}"
     notify_moderators:
@@ -329,12 +324,10 @@ bs_BA:
       title: "Sačuvaj"
       description: "Sačuvaj ovaj post"
       short_description: "Sačuvaj ovaj post"
-      long_form: "sačuvan post"
     like:
       title: "Like"
       description: "Lajkuj ovaj post"
       short_description: "Lajkuj ovaj post"
-      long_form: "lajkovao si ovo"
   user_activity:
     no_replies:
       others: "Nema odgovora."
@@ -647,7 +640,6 @@ bs_BA:
     max_bookmarks_per_day: "Maximum number of bookmarks per user per day."
     max_edits_per_day: "Maximum number of edits per user per day."
     max_topics_per_day: "Maximum number of topics a user can create per day."
-    max_personal_messages_per_day: "Maximum number of private messages users can create per day."
     suggested_topics: "Number of suggested topics shown at the bottom of a topic."
     limit_suggested_to_category: "Only show topics from the current category in suggested topics."
     clean_up_uploads: "Remove orphan unreferenced uploads to prevent illegal hosting. WARNING: you may want to back up of your /uploads directory before enabling this setting."
@@ -791,13 +783,11 @@ bs_BA:
     errors: "%{errors}"
     not_available: "Nije dostupno. Probaj %{suggestion}?"
     something_already_taken: "Something went wrong, perhaps the username or email is already registered. Try the forgot password link."
-    omniauth_error_unknown: "Something went wrong processing your log in, please try again."
     omniauth_confirm_button: "Nastavi"
     new_registrations_disabled: "New account registrations are not allowed at this time."
     password_too_long: "Passwords are limited to 200 characters."
     missing_user_field: "You have not completed all the user fields"
     click_to_continue: "Klikni ovdje da nastavite dalje"
-    second_factor_title: "Two Factor Authentication"
     second_factor_backup_description: "Molim ukucajte jedan od vaši rezevni kodova"
   admin:
     email:
@@ -1025,8 +1015,6 @@ bs_BA:
             placeholder: "name@example.com"
       corporate:
         title: "Organizacija"
-      colors:
-        title: "Izgled"
       homepage:
         fields:
           homepage_style:

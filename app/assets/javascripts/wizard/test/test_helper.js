@@ -17,12 +17,12 @@
 //= require ember-template-compiler
 //= require wizard-application
 //= require wizard-vendor
-//= require helpers/assertions
 //= require_tree ./helpers
 //= require_tree ./acceptance
 //= require_tree ./models
 //= require_tree ./components
 //= require ./wizard-pretender
+//= require test-shims
 
 // Trick JSHint into allow document.write
 var d = document;

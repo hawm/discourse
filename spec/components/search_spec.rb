@@ -8,6 +8,7 @@ describe Search do
 
   before do
     SearchIndexer.enable
+    Jobs.run_immediately!
   end
 
   context 'post indexing' do
@@ -134,12 +135,20 @@ describe Search do
     expect(search.term).to eq('a b c okaylength')
   end
 
-  it 'escapes non alphanumeric characters' do
-    expect(Search.execute('foo :!$);}]>@\#\"\'').posts.length).to eq(0) # There are at least three levels of sanitation for Search.query!
-  end
+  context 'query sanitizaton' do
+    let!(:post) { Fabricate(:post, raw: 'hello world') }
 
-  it "doesn't raise an error when single quotes are present" do
-    expect(Search.execute("'hello' world").posts.length).to eq(0) # There are at least three levels of sanitation for Search.query!
+    it 'escapes backslash' do
+      expect(Search.execute('hello\\').posts).to contain_exactly(post)
+    end
+
+    it 'escapes single quote' do
+      expect(Search.execute("hello'").posts).to contain_exactly(post)
+    end
+
+    it 'escapes non-alphanumeric characters' do
+      expect(Search.execute('hello :!$);}]>@\#\"\'').posts).to contain_exactly(post)
+    end
   end
 
   it 'works when given two terms with spaces' do
@@ -755,7 +764,7 @@ describe Search do
     let(:result) { Search.execute('запись') }
 
     it 'finds something when given cyrillic query' do
-      expect(result.posts).to be_present
+      expect(result.posts).to contain_exactly(post)
     end
   end
 
@@ -952,7 +961,7 @@ describe Search do
       end
 
       it 'shows staff tags' do
-        create_staff_tags(["#{tag.name}9"])
+        create_staff_only_tags(["#{tag.name}9"])
 
         expect(Search.execute(tag.name, guardian: Guardian.new(admin)).tags.map(&:name)).to eq([tag.name, "#{tag.name}9"])
         expect(search.tags.map(&:name)).to eq([tag.name, "#{tag.name}9"])
@@ -1621,6 +1630,14 @@ describe Search do
       ts_query = Search.ts_query(term: "foo.bar/'&baz", ts_config: "simple")
       expect { DB.exec(+"SELECT to_tsvector('bbb') @@ " << ts_query) }.to_not raise_error
       expect(ts_query).to include("baz")
+    end
+
+    it 'esacpes the term correctly' do
+      expect(Search.ts_query(term: 'Title with trailing backslash\\'))
+        .to eq("TO_TSQUERY('english', '''Title with trailing backslash\\\\\\\\'':*')")
+
+      expect(Search.ts_query(term: "Title with trailing quote'"))
+        .to eq("TO_TSQUERY('english', '''Title with trailing quote'''''':*')")
     end
   end
 

@@ -153,7 +153,10 @@ export default createWidget("topic-admin-menu", {
       });
     }
 
-    if (this.get("currentUser.canManageTopic")) {
+    if (
+      this.get("currentUser.canManageTopic") ||
+      details.get("can_moderate_category")
+    ) {
       if (details.get("can_delete")) {
         this.addActionButton({
           className: "topic-admin-delete",
@@ -269,6 +272,14 @@ export default createWidget("topic-admin-menu", {
             : "actions.make_private",
         });
       }
+
+      this.addActionButton({
+        className: "topic-admin-slow-mode",
+        buttonClass: "popup-menu-btn",
+        action: "showTopicSlowModeUpdate",
+        icon: "hourglass-start",
+        label: "actions.slow_mode",
+      });
 
       if (this.currentUser.get("staff")) {
         this.addActionButton({

@@ -150,22 +150,6 @@ var define, requirejs;
         // eslint-disable-next-line
         default: I18n,
       },
-      pretender: {
-        default: window.Pretender,
-      },
-      "ember-qunit": {
-        moduleFor: window.moduleFor,
-        moduleForComponent: window.moduleForComponent,
-      },
-      qunit:
-        typeof window.QUnit !== "undefined"
-          ? {
-              default: window.QUnit,
-              test: window.QUnit.test,
-              skip: window.QUnit.skip,
-              module: window.QUnit.module,
-            }
-          : undefined,
     };
   }
 

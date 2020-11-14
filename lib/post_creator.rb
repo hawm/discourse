@@ -159,6 +159,19 @@ class PostCreator
         return false
       end
 
+      if guardian.affected_by_slow_mode?(@topic)
+        tu = TopicUser.find_by(user: @user, topic: @topic)
+
+        if tu&.last_posted_at
+          threshold = tu.last_posted_at + @topic.slow_mode_seconds.seconds
+
+          if DateTime.now < threshold
+            errors.add(:base, I18n.t(:slow_mode_enabled))
+            return false
+          end
+        end
+      end
+
       unless @topic.present? && (@opts[:skip_guardian] || guardian.can_create?(Post, @topic))
         errors.add(:base, I18n.t(:topic_not_found))
         return false
@@ -368,6 +381,11 @@ class PostCreator
           locale: SiteSetting.default_locale
         )
       )
+
+      if SiteSetting.auto_close_topics_create_linked_topic?
+        # enqueue a job to create a linked topic
+        Jobs.enqueue_in(5.seconds, :create_linked_topic, post_id: @post.id)
+      end
     end
   end
 
@@ -598,10 +616,12 @@ class PostCreator
       .first
 
     if !last_post_time
-      @post.custom_fields[Post::NOTICE_TYPE] = Post.notices[:new_user]
+      @post.custom_fields[Post::NOTICE] = { type: Post.notices[:new_user] }
     elsif SiteSetting.returning_users_days > 0 && last_post_time < SiteSetting.returning_users_days.days.ago
-      @post.custom_fields[Post::NOTICE_TYPE] = Post.notices[:returning_user]
-      @post.custom_fields[Post::NOTICE_ARGS] = last_post_time.iso8601
+      @post.custom_fields[Post::NOTICE] = {
+        type: Post.notices[:returning_user],
+        last_posted_at: last_post_time.iso8601
+      }
     end
   end
 
@@ -622,7 +642,8 @@ class PostCreator
                       @topic.id,
                       posted: true,
                       last_read_post_number: @post.post_number,
-                      highest_seen_post_number: @post.post_number)
+                      highest_seen_post_number: @post.post_number,
+                      last_posted_at: Time.zone.now)
 
     # assume it took us 5 seconds of reading time to make a post
     PostTiming.record_timing(topic_id: @post.topic_id,

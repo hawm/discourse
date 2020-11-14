@@ -168,22 +168,15 @@ componentTest("filter works with non english characters", {
   template: `
     {{category-chooser
       value=value
-      content=content
     }}
   `,
 
   beforeEach() {
     const store = createStore();
-    const nonEnglishCat = store.createRecord("category", {
+    store.createRecord("category", {
       id: 1,
       name: "chữ Quốc ngữ",
     });
-    const englishCat = store.createRecord("category", {
-      id: 2,
-      name: "Baz",
-    });
-
-    this.set("content", [nonEnglishCat, englishCat]);
   },
 
   async test(assert) {
@@ -192,5 +185,29 @@ componentTest("filter works with non english characters", {
 
     assert.ok(this.subject.rows().length, 1);
     assert.equal(this.subject.rowByIndex(0).name(), "chữ Quốc ngữ");
+  },
+});
+
+componentTest("decodes entities in row title", {
+  template: `
+    {{category-chooser
+      value=value
+      options=(hash scopedCategoryId=1)
+    }}
+  `,
+
+  beforeEach() {
+    const store = createStore();
+    store.createRecord("category", {
+      id: 1,
+      name: "cat-with-entities",
+      description: "baz &quot;bar ‘foo’",
+    });
+  },
+
+  async test(assert) {
+    await this.subject.expand();
+
+    assert.equal(this.subject.rowByIndex(0).el()[0].title, 'baz "bar ‘foo’');
   },
 });

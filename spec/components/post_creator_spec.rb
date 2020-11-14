@@ -411,6 +411,29 @@ describe PostCreator do
                 locale: :en
               ))
             end
+
+            describe "auto_close_topics_create_linked_topic is enabled" do
+              before do
+                SiteSetting.auto_close_topics_create_linked_topic = true
+              end
+
+              it "enqueues a job to create a new linked topic" do
+                freeze_time
+                post
+
+                post_2 = PostCreator.new(
+                  topic.user,
+                  topic_id: topic.id,
+                  raw: "this is a second post"
+                ).create
+
+                topic.reload
+
+                expect(topic.closed).to eq(true)
+                expect(topic_timer.reload.deleted_at).to eq_time(Time.zone.now)
+                expect(job_enqueued?(job: :create_linked_topic, args: { post_id: post_2.id })).to eq(true)
+              end
+            end
           end
         end
       end
@@ -720,6 +743,43 @@ describe PostCreator do
         expect(topic.last_posted_at).to eq_time(post.created_at)
         expect(topic.last_post_user_id).to eq(post.user_id)
         expect(topic.word_count).to eq(6)
+      end
+    end
+
+    context 'when the topic is in slow mode' do
+      before do
+        one_day = 86400
+        topic.update!(slow_mode_seconds: one_day)
+      end
+
+      it 'fails if the user recently posted in this topic' do
+        TopicUser.create!(user: user, topic: topic, last_posted_at: 10.minutes.ago)
+
+        post = creator.create
+
+        expect(post).to be_blank
+        expect(creator.errors.count).to eq 1
+        expect(creator.errors.messages[:base][0]).to match I18n.t(:slow_mode_enabled)
+      end
+
+      it 'creates the topic if the user last post is older than the slow mode interval' do
+        TopicUser.create!(user: user, topic: topic, last_posted_at: 5.days.ago)
+
+        post = creator.create
+
+        expect(post).to be_present
+        expect(creator.errors.count).to be_zero
+      end
+
+      it 'creates the topic if the user is a staff member' do
+        admin = Fabricate(:admin)
+        post_creator = PostCreator.new(admin, raw: 'test reply', topic_id: topic.id, reply_to_post_number: 4)
+        TopicUser.create!(user: admin, topic: topic, last_posted_at: 10.minutes.ago)
+
+        post = post_creator.create
+
+        expect(post).to be_present
+        expect(post_creator.errors.count).to be_zero
       end
     end
   end
@@ -1194,6 +1254,19 @@ describe PostCreator do
       topic_user = TopicUser.find_by(user_id: user.id, topic_id: pm.id)
       expect(topic_user.notification_level).to eq(3)
     end
+
+    it 'sets the last_posted_at timestamp to track the last time the user posted' do
+      topic = Fabricate(:topic)
+
+      PostCreator.create(
+        user,
+        topic_id: topic.id,
+        raw: "this is a test reply 123 123 ;)"
+      )
+
+      topic_user = TopicUser.find_by(user_id: user.id, topic_id: topic.id)
+      expect(topic_user.last_posted_at).to be_present
+    end
   end
 
   describe '#create!' do
@@ -1554,10 +1627,10 @@ describe PostCreator do
 
     it "generates post notices for new users" do
       post = PostCreator.create!(user, title: "one of my first topics", raw: "one of my first posts")
-      expect(post.custom_fields[Post::NOTICE_TYPE]).to eq(Post.notices[:new_user])
+      expect(post.custom_fields[Post::NOTICE]).to eq("type" => Post.notices[:new_user])
 
       post = PostCreator.create!(user, title: "another one of my first topics", raw: "another one of my first posts")
-      expect(post.custom_fields[Post::NOTICE_TYPE]).to eq(nil)
+      expect(post.custom_fields[Post::NOTICE]).to eq(nil)
     end
 
     it "generates post notices for returning users" do
@@ -1565,12 +1638,10 @@ describe PostCreator do
       old_post = Fabricate(:post, user: user, created_at: 31.days.ago)
 
       post = PostCreator.create!(user, title: "this is a returning topic", raw: "this is a post")
-      expect(post.custom_fields[Post::NOTICE_TYPE]).to eq(Post.notices[:returning_user])
-      expect(post.custom_fields[Post::NOTICE_ARGS]).to eq(old_post.created_at.iso8601)
+      expect(post.custom_fields[Post::NOTICE]).to eq("type" => Post.notices[:returning_user], "last_posted_at" => old_post.created_at.iso8601)
 
       post = PostCreator.create!(user, title: "this is another topic", raw: "this is my another post")
-      expect(post.custom_fields[Post::NOTICE_TYPE]).to eq(nil)
-      expect(post.custom_fields[Post::NOTICE_ARGS]).to eq(nil)
+      expect(post.custom_fields[Post::NOTICE]).to eq(nil)
     end
 
     it "does not generate for non-human, staged or anonymous users" do
@@ -1579,8 +1650,7 @@ describe PostCreator do
       [anonymous, Discourse.system_user, staged].each do |user|
         expect(user.posts.size).to eq(0)
         post = PostCreator.create!(user, title: "#{user.username}'s first topic", raw: "#{user.name}'s first post")
-        expect(post.custom_fields[Post::NOTICE_TYPE]).to eq(nil)
-        expect(post.custom_fields[Post::NOTICE_ARGS]).to eq(nil)
+        expect(post.custom_fields[Post::NOTICE]).to eq(nil)
       end
     end
   end

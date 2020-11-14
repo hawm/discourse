@@ -136,24 +136,18 @@ describe Post do
         end
       end
     end
+  end
 
-    context 'a post with notices' do
-      let(:post) {
-        post = Fabricate(:post, post_args)
-        post.custom_fields[Post::NOTICE_TYPE] = Post.notices[:returning_user]
-        post.custom_fields[Post::NOTICE_ARGS] = 1.day.ago
-        post.save_custom_fields
-        post
-      }
-
-      describe 'recovery' do
-        it 'deletes notices' do
-          expect { post.trash! }
-            .to change { post.custom_fields.length }.from(2).to(0)
-        end
-      end
+  context 'a post with notices' do
+    let(:post) do
+      post = Fabricate(:post, post_args)
+      post.upsert_custom_fields(Post::NOTICE => { type: Post.notices[:returning_user], last_posted_at: 1.day.ago })
+      post
     end
 
+    it 'will have its notice cleared when post is trashed' do
+      expect { post.trash! }.to change { post.custom_fields }.to({})
+    end
   end
 
   describe "with_secure_media?" do
@@ -1363,7 +1357,7 @@ describe Post do
     fab!(:attachment_upload_2) { Fabricate(:upload) }
     fab!(:attachment_upload_3) { Fabricate(:upload, extension: nil) }
 
-    let(:base_url) { "#{Discourse.base_url_no_prefix}#{Discourse.base_uri}" }
+    let(:base_url) { "#{Discourse.base_url_no_prefix}#{Discourse.base_path}" }
     let(:video_url) { "#{base_url}#{video_upload.url}" }
     let(:audio_url) { "#{base_url}#{audio_upload.url}" }
 
