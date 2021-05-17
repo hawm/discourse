@@ -1,6 +1,7 @@
 {{#discourse-topic multiSelect=multiSelect enteredAt=enteredAt topic=model hasScrolled=hasScrolled}}
   {{#if model}}
     {{add-category-tag-classes category=model.category tags=model.tags}}
+    {{add-topic-status-classes topic=model}}
     <div class="container">
       {{discourse-banner user=currentUser banner=site.banner overlay=hasScrolled hide=model.errorLoading}}
     </div>
@@ -10,14 +11,14 @@
     {{shared-draft-controls topic=model}}
   {{/if}}
 
-  {{plugin-outlet name="topic-above-post-stream" args=(hash model=model)}}
+  {{plugin-outlet name="topic-above-post-stream" args=(hash model=model editFirstPost=(action "editFirstPost"))}}
 
   {{#if model.postStream.loaded}}
     {{#if model.postStream.firstPostPresent}}
       {{#topic-title cancelled=(action "cancelEditingTopic") save=(action "finishedEditingTopic") model=model}}
         {{#if editingTopic}}
           <div class="edit-topic-title">
-            {{private-message-glyph shouldShow=model.isPrivateMessage}}
+            {{private-message-glyph shouldShow=model.isPrivateMessage tagName=""}}
 
             {{text-field id="edit-title" value=buffered.title maxlength=siteSettings.max_topic_title_length autofocus="true"}}
 
@@ -65,9 +66,10 @@
                   href=pmPath
                   title="topic_statuses.personal_message.title"
                   ariaLabel="user.messages.inbox"
+                  tagName=""
                 }}
               {{else}}
-                {{private-message-glyph shouldShow=model.isPrivateMessage}}
+                {{private-message-glyph shouldShow=model.isPrivateMessage  tagName=""}}
               {{/if}}
             {{/unless}}
 
@@ -128,6 +130,8 @@
         }}
       </div>
 
+      {{plugin-outlet name="above-timeline" tagName=""}}
+
       {{#topic-navigation class="topic-navigation" topic=model jumpToDate=(action "jumpToDate") jumpToIndex=(action "jumpToIndex") as |info|}}
         {{#if info.renderTimeline}}
           {{topic-timeline
@@ -151,7 +155,7 @@
             toggleClosed=(action "toggleClosed")
             toggleArchived=(action "toggleArchived")
             toggleVisibility=(action "toggleVisibility")
-            showTopicStatusUpdate=(route-action "showTopicStatusUpdate")
+            showTopicTimerModal=(route-action "showTopicTimerModal")
             showFeatureTopic=(route-action "showFeatureTopic")
             showChangeTimestamp=(route-action "showChangeTimestamp")
             resetBumpDate=(action "resetBumpDate")
@@ -175,7 +179,7 @@
               toggleClosed=(action "toggleClosed")
               toggleArchived=(action "toggleArchived")
               toggleVisibility=(action "toggleVisibility")
-              showTopicStatusUpdate=(route-action "showTopicStatusUpdate")
+              showTopicTimerModal=(route-action "showTopicTimerModal")
               showFeatureTopic=(route-action "showFeatureTopic")
               showChangeTimestamp=(route-action "showChangeTimestamp")
               resetBumpDate=(action "resetBumpDate")
@@ -199,9 +203,11 @@
                 canCreatePost=model.details.can_create_post
                 multiSelect=multiSelect
                 selectedPostsCount=selectedPostsCount
+                filteredPostsCount=model.postStream.filteredPostsCount
                 selectedQuery=selectedQuery
                 gaps=model.postStream.gaps
                 showReadIndicator=model.show_read_indicator
+                streamFilters=model.postStream.streamFilters
                 showFlags=(action "showPostFlags")
                 editPost=(action "editPost")
                 showHistory=(route-action "showHistory")
@@ -221,7 +227,8 @@
                 unhidePost=(action "unhidePost")
                 replyToPost=(action "replyToPost")
                 toggleWiki=(action "toggleWiki")
-                toggleSummary=(action "toggleSummary")
+                showSummary=(action "showSummary")
+                cancelFilter=(action "cancelFilter")
                 removeAllowedUser=(action "removeAllowedUser")
                 removeAllowedGroup=(action "removeAllowedGroup")
                 topVisibleChanged=(action "topVisibleChanged")
@@ -287,19 +294,20 @@
                 </div>
               {{/if}}
 
-              {{slow-mode-info topic=model user=currentUser}}
+              {{slow-mode-info topic=model user=currentUser tagName=""}}
 
               {{topic-timer-info
                   topicClosed=model.closed
                   statusType=model.topic_timer.status_type
                   executeAt=model.topic_timer.execute_at
                   basedOnLastPost=model.topic_timer.based_on_last_post
-                  duration=model.topic_timer.duration
+                  durationMinutes=model.topic_timer.duration_minutes
                   categoryId=model.topic_timer.category_id
+                  showTopicTimerModal=(route-action "showTopicTimerModal")
                   removeTopicTimer=(action "removeTopicTimer" model.topic_timer.status_type "topic_timer")}}
 
               {{#if showSelectedPostsAtBottom}}
-                <div class="selected-posts {{unless multiSelect "hidden"}}">
+                <div class="selected-posts {{unless multiSelect "hidden"}} {{if showSelectedPostsAtBottom "hidden"}}">
                   {{selected-posts
                     selectedPostsCount=selectedPostsCount
                     canSelectAll=canSelectAll
@@ -341,7 +349,7 @@
             toggleClosed=(action "toggleClosed")
             toggleArchived=(action "toggleArchived")
             toggleVisibility=(action "toggleVisibility")
-            showTopicStatusUpdate=(route-action "showTopicStatusUpdate")
+            showTopicTimerModal=(route-action "showTopicTimerModal")
             showFeatureTopic=(route-action "showFeatureTopic")
             showChangeTimestamp=(route-action "showChangeTimestamp")
             resetBumpDate=(action "resetBumpDate")

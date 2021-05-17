@@ -91,6 +91,7 @@ module PrettyText
     apply_es6_file(ctx, root_path, "discourse-common/addon/lib/get-url")
     apply_es6_file(ctx, root_path, "discourse-common/addon/lib/object")
     apply_es6_file(ctx, root_path, "discourse-common/addon/lib/deprecated")
+    apply_es6_file(ctx, root_path, "discourse-common/addon/lib/escape")
     apply_es6_file(ctx, root_path, "discourse/app/lib/to-markdown")
     apply_es6_file(ctx, root_path, "discourse/app/lib/utilities")
 
@@ -172,6 +173,7 @@ module PrettyText
         __optInput.emojiUnicodeReplacer = __emojiUnicodeReplacer;
         __optInput.lookupUploadUrls = __lookupUploadUrls;
         __optInput.censoredRegexp = #{WordWatcher.word_matcher_regexp(:censor)&.source.to_json};
+        __optInput.watchedWordsReplacements = #{WordWatcher.get_cached_words(:replace).to_json};
       JS
 
       if opts[:topicId]
@@ -237,6 +239,7 @@ module PrettyText
         __performEmojiUnescape(#{title.inspect}, {
           getURL: __getURL,
           emojiSet: #{set},
+          emojiCDNUrl: "#{SiteSetting.external_emoji_url.blank? ? "" : SiteSetting.external_emoji_url}",
           customEmoji: #{custom},
           enableEmojiShortcuts: #{SiteSetting.enable_emoji_shortcuts},
           inlineEmoji: #{SiteSetting.enable_inline_emoji_translation}
@@ -333,7 +336,7 @@ module PrettyText
     # extract quotes
     doc.css("aside.quote[data-topic]").each do |aside|
       if aside["data-topic"].present?
-        url = +"/t/topic/#{aside["data-topic"]}"
+        url = +"/t/#{aside["data-topic"]}"
         url << "/#{aside["data-post"]}" if aside["data-post"].present?
         links << DetectedLink.new(url, true)
       end
@@ -401,7 +404,7 @@ module PrettyText
         vimeo_id = iframe['src'].split('/').last
         vimeo_url = "https://vimeo.com/#{vimeo_id}"
       end
-      iframe.replace "<p><a href='#{vimeo_url}'>#{vimeo_url}</a></p>"
+      iframe.replace Nokogiri::HTML5.fragment("<p><a href='#{vimeo_url}'>#{vimeo_url}</a></p>")
     end
   end
 
@@ -451,28 +454,36 @@ module PrettyText
 
       width = img['width']
       height = img['height']
-      oneboxed = img.ancestors.css(".onebox-body").any? || img.classes.include?("onebox-avatar")
+      onebox_type = nil
+
+      if img.ancestors.css(".onebox-body").any?
+        if img.classes.include?("onebox-avatar-inline")
+          onebox_type = "avatar-inline"
+        else
+          onebox_type = "thumbnail"
+        end
+      end
 
       # we always want this to be tiny and without any special styles
       if img.classes.include?('site-icon')
-        oneboxed = false
+        onebox_type = nil
         width = 16
         height = 16
       end
 
       if Upload.secure_media_url?(url)
-        img.add_next_sibling secure_media_placeholder(doc, url, oneboxed: oneboxed, width: width, height: height)
+        img.add_next_sibling secure_media_placeholder(doc, url, onebox_type: onebox_type, width: width, height: height)
         img.remove
       end
     end
   end
 
-  def self.secure_media_placeholder(doc, url, oneboxed: false, width: nil, height: nil)
+  def self.secure_media_placeholder(doc, url, onebox_type: false, width: nil, height: nil)
     data_width = width ? "data-width=#{width}" : ''
     data_height = height ? "data-height=#{height}" : ''
-    data_oneboxed = oneboxed ? "data-oneboxed=true" : ''
+    data_onebox_type = onebox_type ? "data-onebox-type='#{onebox_type}'" : ''
     <<~HTML
-    <div class="secure-media-notice" data-stripped-secure-media="#{url}" #{data_oneboxed} #{data_width} #{data_height}>
+    <div class="secure-media-notice" data-stripped-secure-media="#{url}" #{data_onebox_type} #{data_width} #{data_height}>
       #{I18n.t('emails.secure_media_placeholder')} <a class='stripped-secure-view-media' href="#{url}">#{I18n.t("emails.view_redacted_media")}</a>.
     </div>
     HTML

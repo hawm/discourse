@@ -1,7 +1,6 @@
-import { exists } from "discourse/tests/helpers/qunit-helpers";
-import { visit, currentRouteName } from "@ember/test-helpers";
+import { acceptance, exists } from "discourse/tests/helpers/qunit-helpers";
+import { currentRouteName, visit } from "@ember/test-helpers";
 import { test } from "qunit";
-import { acceptance } from "discourse/tests/helpers/qunit-helpers";
 
 acceptance("Auth Complete", function (needs) {
   needs.hooks.beforeEach(() => {
@@ -30,7 +29,7 @@ acceptance("Auth Complete", function (needs) {
     );
 
     assert.ok(
-      exists("#discourse-modal div.create-account"),
+      exists("#discourse-modal div.create-account-body"),
       "it shows the registration modal"
     );
   });
@@ -42,7 +41,7 @@ acceptance("Auth Complete", function (needs) {
     assert.equal(currentRouteName(), "login", "it redirects to the login page");
 
     assert.ok(
-      exists("#discourse-modal div.create-account"),
+      exists("#discourse-modal div.create-account-body"),
       "it shows the registration modal"
     );
   });

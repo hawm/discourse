@@ -1,9 +1,18 @@
-import { queryAll } from "discourse/tests/helpers/qunit-helpers";
-import { exists } from "discourse/tests/helpers/qunit-helpers";
-import { fillIn, click, visit, currentURL } from "@ember/test-helpers";
-import { test } from "qunit";
-import { acceptance, count } from "discourse/tests/helpers/qunit-helpers";
+import {
+  acceptance,
+  count,
+  exists,
+  queryAll,
+} from "discourse/tests/helpers/qunit-helpers";
+import {
+  click,
+  currentURL,
+  fillIn,
+  triggerKeyEvent,
+  visit,
+} from "@ember/test-helpers";
 import siteSettingFixture from "discourse/tests/fixtures/site-settings";
+import { test } from "qunit";
 
 acceptance("Admin - Site Settings", function (needs) {
   let updatedTitle;
@@ -47,7 +56,7 @@ acceptance("Admin - Site Settings", function (needs) {
 
     assert.equal(
       queryAll(".row.setting .setting-label h3 a").attr("href"),
-      "/admin/logs/staff_action_logs?filters=%7B%22subject%22%3A%22title%22%2C%22action_name%22%3A%22change_site_setting%22%7D",
+      "/admin/logs/staff_action_logs?filters=%7B%22subject%22%3A%22title%22%2C%22action_name%22%3A%22change_site_setting%22%7D&force_refresh=true",
       "it links to the staff action log"
     );
   });
@@ -92,7 +101,7 @@ acceptance("Admin - Site Settings", function (needs) {
     );
 
     await fillIn(".input-setting-string", "Test");
-    await keyEvent(".input-setting-string", "keydown", 13); // enter
+    await triggerKeyEvent(".input-setting-string", "keydown", 13); // enter
     assert.ok(
       exists(".row.setting.overridden"),
       "saving via Enter key marks setting as overriden"

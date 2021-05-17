@@ -1,7 +1,6 @@
-import { exists } from "discourse/tests/helpers/qunit-helpers";
+import { acceptance, exists } from "discourse/tests/helpers/qunit-helpers";
 import { click, visit } from "@ember/test-helpers";
 import { test } from "qunit";
-import { acceptance } from "discourse/tests/helpers/qunit-helpers";
 
 acceptance("Tags intersection", function (needs) {
   needs.user();
@@ -37,7 +36,7 @@ acceptance("Tags intersection", function (needs) {
 
     assert.ok(exists(".mini-tag-chooser"), "The tag selector appears");
     assert.equal(
-      $(".mini-tag-chooser").text().trim(),
+      $(".composer-fields .mini-tag-chooser").text().trim(),
       "first, second",
       "populates the tags when clicking 'New topic'"
     );

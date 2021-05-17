@@ -1,96 +1,89 @@
-import { test } from "qunit";
-import { moduleFor } from "ember-qunit";
+import {
+  discourseModule,
+  queryAll,
+} from "discourse/tests/helpers/qunit-helpers";
+import componentTest, {
+  setupRenderingTest,
+} from "discourse/tests/helpers/component-test";
+import hbs from "htmlbars-inline-precompile";
 
-moduleFor("component:group-membership-button");
+discourseModule(
+  "Integration | Component | group-membership-button",
+  function (hooks) {
+    setupRenderingTest(hooks);
 
-test("canJoinGroup", function (assert) {
-  this.subject().setProperties({
-    model: { public_admission: false, is_group_user: true },
-  });
+    componentTest("canJoinGroup", {
+      template: hbs`{{group-membership-button model=model}}`,
 
-  assert.equal(
-    this.subject().get("canJoinGroup"),
-    false,
-    "can't join group if public_admission is false"
-  );
+      beforeEach() {
+        this.set("model", { public_admission: false, is_group_user: true });
+      },
 
-  this.subject().set("model.public_admission", true);
+      async test(assert) {
+        assert.ok(
+          queryAll(".group-index-join").length === 0,
+          "can't join group if public_admission is false"
+        );
 
-  assert.equal(
-    this.subject().get("canJoinGroup"),
-    false,
-    "can't join group if user is already in the group"
-  );
+        this.set("model.public_admission", true);
+        assert.ok(
+          queryAll(".group-index-join").length === 0,
+          "can't join group if user is already in the group"
+        );
 
-  this.subject().set("model.is_group_user", false);
+        this.set("model.is_group_user", false);
+        assert.ok(
+          queryAll(".group-index-join").length,
+          "allowed to join group"
+        );
+      },
+    });
 
-  assert.equal(
-    this.subject().get("canJoinGroup"),
-    true,
-    "allowed to join group"
-  );
-});
+    componentTest("canLeaveGroup", {
+      template: hbs`{{group-membership-button model=model}}`,
+      beforeEach() {
+        this.set("model", { public_exit: false, is_group_user: false });
+      },
+      async test(assert) {
+        assert.ok(
+          queryAll(".group-index-leave").length === 0,
+          "can't leave group if public_exit is false"
+        );
 
-test("canLeaveGroup", function (assert) {
-  this.subject().setProperties({
-    model: { public_exit: false, is_group_user: false },
-  });
+        this.set("model.public_exit", true);
+        assert.ok(
+          queryAll(".group-index-leave").length === 0,
+          "can't leave group if user is not in the group"
+        );
 
-  assert.equal(
-    this.subject().get("canLeaveGroup"),
-    false,
-    "can't leave group if public_exit is false"
-  );
+        this.set("model.is_group_user", true);
+        assert.ok(
+          queryAll(".group-index-leave").length === 1,
+          "allowed to leave group"
+        );
+      },
+    });
 
-  this.subject().set("model.public_exit", true);
+    componentTest("canRequestMembership", {
+      template: hbs`{{group-membership-button model=model}}`,
+      beforeEach() {
+        this.set("model", {
+          allow_membership_requests: true,
+          is_group_user: true,
+        });
+      },
 
-  assert.equal(
-    this.subject().get("canLeaveGroup"),
-    false,
-    "can't leave group if user is not in the group"
-  );
-
-  this.subject().set("model.is_group_user", true);
-
-  assert.equal(
-    this.subject().get("canLeaveGroup"),
-    true,
-    "allowed to leave group"
-  );
-});
-
-test("canRequestMembership", function (assert) {
-  this.subject().setProperties({
-    model: { allow_membership_requests: true, is_group_user: true },
-  });
-
-  assert.equal(
-    this.subject().get("canRequestMembership"),
-    false,
-    "can't request for membership if user is already in the group"
-  );
-
-  this.subject().set("model.is_group_user", false);
-
-  assert.equal(
-    this.subject().get("canRequestMembership"),
-    true,
-    "allowed to request for group membership"
-  );
-});
-
-test("userIsGroupUser", function (assert) {
-  this.subject().setProperties({
-    model: { is_group_user: true },
-  });
-
-  assert.equal(this.subject().get("userIsGroupUser"), true);
-
-  this.subject().set("model.is_group_user", false);
-
-  assert.equal(this.subject().get("userIsGroupUser"), false);
-
-  this.subject().set("model.is_group_user", null);
-
-  assert.equal(this.subject().get("userIsGroupUser"), false);
-});
+      async test(assert) {
+        assert.ok(
+          queryAll(".group-index-request").length === 0,
+          "can't request for membership if user is already in the group"
+        );
+        this.set("model.is_group_user", false);
+        assert.ok(
+          queryAll(".group-index-request").length,
+          "allowed to request for group membership"
+        );
+      },
+    });
+  }
+);

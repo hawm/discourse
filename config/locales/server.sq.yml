@@ -159,26 +159,6 @@ sq:
     until_posts:
       one: "%{count} postim"
       other: "%{count} postime"
-    "new-topic": |
-      Mirë se vini te %{site_name} &mdash; **faleminderit që nisët një bisedë të re!**
-
-      - A ju duket tërheqës titulli nëse e lexoni me zë të lartë? A është e mirë përmbledhja?
-
-      - Kush do të tërhiqej nga kjo temë? Përse ka rëndësi? Çfarë reagimi prisni?
-
-      - Përfshini fjalë të përdorura zakonisht në temën tuaj kështu që të tjerët mund **ta gjejnë** atë. Për të grupuar temën tuaj me të ngjashmet, zgjidhni një kategori.
-
-      Për më tepër, [lexoni porositë e bashkësisë](%{base_path}/guidelines). Ky panel do t'ju shfaqet vetëm gjatë %{education_posts_text} tuaj të parë.
-    "new-reply": |
-      Mirë se vini tek %{site_name} &mdash; **faleminderit për pjesëmarrjen!**
-
-      - Jini të sjellshëm me anëtarët e tjerë të faqes.
-
-      - Kritikat janë të mirëpritura, ama mundohuni të kritikoni *idetë* e jo anëtarët.
-
-      - A i shton diçka diskutimit përgjigja juaj?
-
-      Për më shumë, shikoni [udhëzimet e faqes](%{base_path}/guidelines). Ky njoftim do të shfaqet vetëm për %{education_posts_text}.
   activerecord:
     attributes:
       category:
@@ -398,7 +378,6 @@ sq:
     title: "Çregjistrohuni"
     stop_watching_topic: "Ndaloni së ndjekuri këtë temë, %{link}"
     unwatch_category: "Ndaloni së ndjekuri të gjitha temat në %{category}"
-    all: "Mos më dërgoni më email nga %{sitename}"
     log_out: "Shkëputu"
     digest_frequency:
       never: "asnjëherë"
@@ -678,9 +657,6 @@ sq:
     login_required: "Require authentication to read content on this site, disallow anonymous access."
     min_password_length: "Minimum password length."
     block_common_passwords: "Mos lejo fjalëkalimet që gjenden në 10,000 fjalëkalimet më të përdorshme."
-    enable_sso: "Enable single sign on via an external site (WARNING: USERS' EMAIL ADDRESSES *MUST* BE VALIDATED BY THE EXTERNAL SITE!)"
-    sso_secret: "Secret string used to cryptographically authenticate SSO information, be sure it is 10 characters or longer"
-    sso_not_approved_url: "Redirect unapproved SSO accounts to this URL"
     allow_new_registrations: "Allow new user registrations. Uncheck this to prevent anyone from creating a new account."
     google_oauth2_client_id: "Client ID of your Google application."
     google_oauth2_client_secret: "Client secret of your Google application."
@@ -710,7 +686,6 @@ sq:
     s3_upload_bucket: "The Amazon S3 bucket name that files will be uploaded into. WARNING: must be lowercase, no periods, no underscores."
     s3_cdn_url: "The CDN URL to use for all s3 assets (for example: https://cdn.somewhere.com). WARNING: after changing this setting you must rebake all old posts."
     avatar_sizes: "List of automatically generated avatar sizes."
-    enable_flash_video_onebox: "Enable embedding of swf and flv (Adobe Flash) links in oneboxes. WARNING: may introduce security risks."
     default_invitee_trust_level: "Default trust level (0-4) for invited users."
     default_trust_level: "Default trust level (0-4) for all new users. WARNING! Changing this will put you at serious risk for spam."
     tl1_requires_topics_entered: "How many topics a new user must enter before promotion to trust level 1."
@@ -817,7 +792,6 @@ sq:
     embed_post_limit: "Maximum number of posts to embed."
     show_create_topics_notice: "If the site has fewer than 5 public topics, show a notice asking admins to create some topics."
     delete_drafts_older_than_n_days: "Delete drafts older than (n) days."
-    prevent_anons_from_downloading_files: "Prevent anonymous users from downloading attachments. WARNING: this will prevent any non-image site assets posted as attachments from working."
     slug_generation_method: "Choose a slug generation method. 'encoded' will generate percent encoding string. 'none' will disable slug at all."
     enable_emoji: "Enable emoji"
     emoji_set: "How would you like your emoji?"
@@ -1397,8 +1371,6 @@ sq:
                 label: "Kategoritë dhe temat e zgjedhura"
               categories_and_latest_topics:
                 label: "Kategoritë dhe temat e fundit"
-      emoji:
-        title: "Emoji"
   joined: "Anëtarësuar"
   discourse_push_notifications:
     popup:

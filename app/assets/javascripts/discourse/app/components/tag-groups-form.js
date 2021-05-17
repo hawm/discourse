@@ -1,11 +1,11 @@
+import Component from "@ember/component";
+import Group from "discourse/models/group";
 import I18n from "I18n";
+import PermissionType from "discourse/models/permission-type";
+import bootbox from "bootbox";
+import { bufferedProperty } from "discourse/mixins/buffered-content";
 import discourseComputed from "discourse-common/utils/decorators";
 import { isEmpty } from "@ember/utils";
-import Component from "@ember/component";
-import { bufferedProperty } from "discourse/mixins/buffered-content";
-import PermissionType from "discourse/models/permission-type";
-import Group from "discourse/models/group";
-import bootbox from "bootbox";
 
 export default Component.extend(bufferedProperty("model"), {
   tagName: "",
@@ -23,14 +23,12 @@ export default Component.extend(bufferedProperty("model"), {
   },
 
   @discourseComputed(
-    "buffered.isSaving",
     "buffered.name",
     "buffered.tag_names",
     "buffered.permissions"
   )
-  savingDisabled(isSaving, name, tagNames, permissions) {
+  cannotSave(name, tagNames, permissions) {
     return (
-      isSaving ||
       isEmpty(name) ||
       isEmpty(tagNames) ||
       (!this.everyoneSelected(permissions) &&
@@ -99,17 +97,28 @@ export default Component.extend(bufferedProperty("model"), {
     },
 
     setPermissionsGroups(groupIds) {
-      let permissions = {};
+      let updatedPermissions = Object.assign(
+        {},
+        this.buffered.get("permissions")
+      );
+
       this.allGroups.forEach((group) => {
         if (groupIds.includes(group.id)) {
-          permissions[group.name] = PermissionType.FULL;
+          updatedPermissions[group.name] = PermissionType.FULL;
+        } else {
+          delete updatedPermissions[group.name];
         }
       });
 
-      this.buffered.set("permissions", permissions);
+      this.buffered.set("permissions", updatedPermissions);
     },
 
     save() {
+      if (this.cannotSave) {
+        bootbox.alert(I18n.t("tagging.groups.cannot_save"));
+        return false;
+      }
+
       const attrs = this.buffered.getProperties(
         "name",
         "tag_names",

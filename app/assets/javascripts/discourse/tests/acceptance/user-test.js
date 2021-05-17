@@ -1,11 +1,10 @@
-import { visit, currentRouteName } from "@ember/test-helpers";
-import { test } from "qunit";
 import {
   acceptance,
   exists,
   queryAll,
 } from "discourse/tests/helpers/qunit-helpers";
-import { click } from "@ember/test-helpers";
+import { click, currentRouteName, visit } from "@ember/test-helpers";
+import { test } from "qunit";
 
 acceptance("User Routes", function (needs) {
   needs.user();
@@ -16,7 +15,13 @@ acceptance("User Routes", function (needs) {
     );
   });
   test("Invalid usernames", async function (assert) {
-    await visit("/u/eviltrout%2F..%2F..%2F/summary");
+    try {
+      await visit("/u/eviltrout%2F..%2F..%2F/summary");
+    } catch (e) {
+      if (e.message !== "TransitionAborted") {
+        throw e;
+      }
+    }
 
     assert.equal(currentRouteName(), "exception-unknown");
   });
@@ -85,7 +90,7 @@ acceptance("User Routes", function (needs) {
       "has draft action buttons"
     );
 
-    await click(".user-stream button.resume-draft:eq(0)");
+    await click(".user-stream button.resume-draft:nth-of-type(1)");
     assert.ok(
       exists(".d-editor-input"),
       "composer is visible after resuming a draft"

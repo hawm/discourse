@@ -130,6 +130,7 @@ export default class AllowLister {
 // Only add to `default` when you always want your allowlist to occur. In other words,
 // don't change this for a plugin or a feature that can be disabled
 export const DEFAULT_LIST = [
+  "a.anchor",
   "a.attachment",
   "a.hashtag",
   "a.mention",
@@ -190,9 +191,11 @@ export const DEFAULT_LIST = [
   "img[height]",
   "img[title]",
   "img[width]",
+  "img[data-thumbnail]",
   "ins",
   "kbd",
   "li",
+  "mark",
   "ol",
   "ol[start]",
   "p",
@@ -225,7 +228,7 @@ export const DEFAULT_LIST = [
   "track[srclang]",
   "ul",
   "video",
-  "video[autoplay]",
+  // video[autoplay] handled by sanitizer.js
   "video[controls]",
   "video[controlslist]",
   "video[crossorigin]",

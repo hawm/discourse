@@ -1,8 +1,7 @@
-import { queryAll } from "discourse/tests/helpers/qunit-helpers";
+import { acceptance, queryAll } from "discourse/tests/helpers/qunit-helpers";
 import { click, fillIn, visit } from "@ember/test-helpers";
-import { test } from "qunit";
 import I18n from "I18n";
-import { acceptance } from "discourse/tests/helpers/qunit-helpers";
+import { test } from "qunit";
 
 acceptance("Login with email - hide email address taken", function (needs) {
   needs.settings({
@@ -20,7 +19,7 @@ acceptance("Login with email - hide email address taken", function (needs) {
     await visit("/");
     await click("header .login-button");
     await fillIn("#login-account-name", "someuser@example.com");
-    await click(".login-with-email-button");
+    await click("#email-login-link");
 
     assert.equal(
       queryAll(".alert-success").html().trim(),

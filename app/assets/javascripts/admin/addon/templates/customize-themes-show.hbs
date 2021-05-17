@@ -84,6 +84,9 @@
 
       <div class="control-unit">
         {{#if model.remote_theme.is_git}}
+          <div class="alert alert-info">
+            {{html-safe (i18n "admin.customize.theme.remote_theme_edits" repoURL=remoteThemeLink)}}
+          </div>
 
           {{#if showRemoteError}}
             <div class="error-message">
@@ -105,7 +108,11 @@
               {{i18n "admin.customize.theme.updating"}}
             {{else}}
               {{#if model.remote_theme.commits_behind}}
-                {{i18n "admin.customize.theme.commits_behind" count=model.remote_theme.commits_behind}}
+                {{#if hasOverwrittenHistory}}
+                  {{i18n "admin.customize.theme.has_overwritten_history"}}
+                {{else}}
+                  {{i18n "admin.customize.theme.commits_behind" count=model.remote_theme.commits_behind}}
+                {{/if}}
                 {{#if model.remote_theme.github_diff_link}}
                   <a href={{model.remote_theme.github_diff_link}}>
                     {{i18n "admin.customize.theme.compare_commits"}}
@@ -134,12 +141,17 @@
     {{/if}}
   </div>
 
-  {{#unless model.component}}
+  {{#if showCheckboxes}}
     <div class="control-unit">
-      {{inline-edit-checkbox action=(action "applyDefault") labelKey="admin.customize.theme.is_default" checked=model.default}}
-      {{inline-edit-checkbox action=(action "applyUserSelectable") labelKey="admin.customize.theme.user_selectable" checked=model.user_selectable}}
+      {{#unless model.component}}
+        {{inline-edit-checkbox action=(action "applyDefault") labelKey="admin.customize.theme.is_default" checked=model.default modelId=model.id}}
+        {{inline-edit-checkbox action=(action "applyUserSelectable") labelKey="admin.customize.theme.user_selectable" checked=model.user_selectable modelId=model.id}}
+      {{/unless}}
+      {{#if model.remote_theme}}
+        {{inline-edit-checkbox action=(action "applyAutoUpdateable") labelKey="admin.customize.theme.auto_update" checked=model.auto_update modelId=model.id}}
+      {{/if}}
     </div>
-  {{/unless}}
+  {{/if}}
 
   {{#unless model.component}}
     {{#d-section class="form-horizontal theme settings control-unit"}}
@@ -192,7 +204,7 @@
     {{/d-section}}
   {{/if}}
 
-  {{#unless model.remote_theme}}
+  {{#unless model.remote_theme.is_git}}
     <div class="control-unit">
       <div class="mini-title">{{i18n "admin.customize.theme.css_html"}}</div>
       {{#if model.hasEditedFields}}
@@ -281,7 +293,9 @@
     <a href={{previewUrl}} title={{i18n "admin.customize.explain_preview"}} rel="noopener noreferrer" target="_blank" class="btn btn-default">{{d-icon "desktop"}}{{i18n "admin.customize.theme.preview"}}</a>
     <a class="btn btn-default export" rel="noopener noreferrer" target="_blank" href={{downloadUrl}}>{{d-icon "download"}} {{i18n "admin.export_json.button_text"}}</a>
 
-    {{d-button action=(action "switchType") label="admin.customize.theme.convert" icon=convertIcon class="btn-default btn-normal" title=convertTooltip}}
+    {{#if showConvert}}
+      {{d-button action=(action "switchType") label="admin.customize.theme.convert" icon=convertIcon class="btn-default btn-normal" title=convertTooltip}}
+    {{/if}}
 
     {{#if model.component}}
       {{#if model.enabled}}

@@ -1,7 +1,6 @@
-import { queryAll } from "discourse/tests/helpers/qunit-helpers";
+import { acceptance, queryAll } from "discourse/tests/helpers/qunit-helpers";
 import { click, visit } from "@ember/test-helpers";
 import { test } from "qunit";
-import { acceptance } from "discourse/tests/helpers/qunit-helpers";
 
 acceptance("Group Requests", function (needs) {
   let requests;
@@ -92,7 +91,7 @@ acceptance("Group Requests", function (needs) {
         .text()
         .trim()
         .replace(/\s+/g, " "),
-      "eviltrout Robin Ward"
+      "Robin Ward eviltrout"
     );
     assert.equal(
       queryAll(".group-members tr:first-child td:nth-child(3)").text().trim(),

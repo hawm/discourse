@@ -26,7 +26,6 @@ class Users::OmniauthCallbacksController < ApplicationController
     auth[:session] = session
 
     authenticator = self.class.find_authenticator(params[:provider])
-    provider = DiscoursePluginRegistry.auth_providers.find { |p| p.name == params[:provider] }
 
     if session.delete(:auth_reconnect) && authenticator.can_connect_existing_user? && current_user
       # Save to redis, with a secret token, then redirect to confirmation screen
@@ -36,12 +35,16 @@ class Users::OmniauthCallbacksController < ApplicationController
     else
       DiscourseEvent.trigger(:before_auth, authenticator, auth)
       @auth_result = authenticator.after_authenticate(auth)
+      @auth_result.user = nil if @auth_result&.user&.staged # Treat staged users the same as unregistered users
       DiscourseEvent.trigger(:after_auth, authenticator, @auth_result)
     end
 
     preferred_origin = request.env['omniauth.origin']
 
-    if SiteSetting.enable_sso_provider && payload = cookies.delete(:sso_payload)
+    if session[:destination_url].present?
+      preferred_origin = session[:destination_url]
+      session.delete(:destination_url)
+    elsif SiteSetting.enable_discourse_connect_provider && payload = cookies.delete(:sso_payload)
       preferred_origin = session_sso_provider_url + "?" + payload
     elsif cookies[:destination_url].present?
       preferred_origin = cookies[:destination_url]
@@ -54,9 +57,7 @@ class Users::OmniauthCallbacksController < ApplicationController
       rescue URI::Error
       end
 
-      if parsed && # Valid
-         (parsed.host == nil || parsed.host == Discourse.current_hostname) && # Local
-         !parsed.path.starts_with?("#{Discourse.base_path}/auth/") # Not /auth URL
+      if valid_origin?(parsed)
         @origin = +"#{parsed.path}"
         @origin << "?#{parsed.query}" if parsed.query
       end
@@ -67,20 +68,28 @@ class Users::OmniauthCallbacksController < ApplicationController
     end
 
     @auth_result.destination_url = @origin
+    @auth_result.authenticator_name = authenticator.name
 
-    if @auth_result.failed?
-      flash[:error] = @auth_result.failed_reason.html_safe
-      render('failure')
-    else
-      @auth_result.authenticator_name = authenticator.name
-      complete_response_data
-      cookies['_bypass_cache'] = true
-      cookies[:authentication_data] = {
-        value: @auth_result.to_client_hash.to_json,
-        path: Discourse.base_path("/")
-      }
-      redirect_to @origin
-    end
+    return render_auth_result_failure if @auth_result.failed?
+
+    complete_response_data
+
+    return render_auth_result_failure if @auth_result.failed?
+
+    cookies['_bypass_cache'] = true
+    cookies[:authentication_data] = {
+      value: @auth_result.to_client_hash.to_json,
+      path: Discourse.base_path("/")
+    }
+    redirect_to @origin
+  end
+
+  def valid_origin?(uri)
+    return false if uri.nil?
+    return false if uri.host.present? && uri.host != Discourse.current_hostname
+    return false if uri.path.start_with?("#{Discourse.base_path}/auth/")
+    return false if uri.path.start_with?("#{Discourse.base_path}/login")
+    true
   end
 
   def failure
@@ -98,13 +107,27 @@ class Users::OmniauthCallbacksController < ApplicationController
 
   protected
 
+  def render_auth_result_failure
+    flash[:error] = @auth_result.failed_reason.html_safe
+    render 'failure'
+  end
+
   def complete_response_data
     if @auth_result.user
       user_found(@auth_result.user)
-    elsif SiteSetting.invite_only?
+    elsif invite_required?
       @auth_result.requires_invite = true
     else
       session[:authentication] = @auth_result.session_data
+    end
+  end
+
+  def invite_required?
+    if SiteSetting.invite_only?
+      path = Discourse.route_for(@origin)
+      return true unless path
+      return true if path[:controller] != "invites" && path[:action] != "show"
+      !Invite.exists?(invite_key: path[:id])
     end
   end
 
@@ -115,10 +138,8 @@ class Users::OmniauthCallbacksController < ApplicationController
       return
     end
 
-    # automatically activate/unstage any account if a provider marked the email valid
+    # automatically activate any account if a provider marked the email valid
     if @auth_result.email_valid && @auth_result.email == user.email
-      user.unstage!
-
       if !user.active || !user.email_confirmed?
         user.update!(password: SecureRandom.hex)
 
@@ -138,7 +159,14 @@ class Users::OmniauthCallbacksController < ApplicationController
     elsif ScreenedIpAddress.block_admin_login?(user, request.remote_ip)
       @auth_result.admin_not_allowed_from_ip_address = true
     elsif Guardian.new(user).can_access_forum? && user.active # log on any account that is active with forum access
-      user.save! if @auth_result.apply_user_attributes!
+      begin
+        user.save! if @auth_result.apply_user_attributes!
+      rescue ActiveRecord::RecordInvalid => e
+        @auth_result.failed = true
+        @auth_result.failed_reason = e.record.errors.full_messages.join(", ")
+        return
+      end
+
       log_on_user(user)
       Invite.invalidate_for_email(user.email) # invite link can't be used to log in anymore
       session[:authentication] = nil # don't carry around old auth info, perhaps move elsewhere

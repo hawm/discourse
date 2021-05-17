@@ -40,6 +40,7 @@ describe RemoteTheme do
         "stylesheets/file.scss" => ".class1{color:red}",
         "stylesheets/empty.scss" => "",
         "javascripts/discourse/controllers/test.js.es6" => "console.log('test');",
+        "test/acceptance/theme-test.js" => "assert.ok(true);",
         "common/header.html" => "I AM HEADER",
         "common/random.html" => "I AM SILLY",
         "common/embedded.scss" => "EMBED",
@@ -74,7 +75,7 @@ describe RemoteTheme do
 
       expect(@theme.theme_modifier_set.serialize_topic_excerpts).to eq(true)
 
-      expect(@theme.theme_fields.length).to eq(10)
+      expect(@theme.theme_fields.length).to eq(11)
 
       mapped = Hash[*@theme.theme_fields.map { |f| ["#{f.target_id}-#{f.name}", f.value] }.flatten]
 
@@ -88,8 +89,9 @@ describe RemoteTheme do
       expect(mapped["3-yaml"]).to eq("boolean_setting: true")
 
       expect(mapped["4-en"]).to eq("sometranslations")
+      expect(mapped["7-acceptance/theme-test.js"]).to eq("assert.ok(true);")
 
-      expect(mapped.length).to eq(10)
+      expect(mapped.length).to eq(11)
 
       expect(@theme.settings.length).to eq(1)
       expect(@theme.settings.first.value).to eq(true)
@@ -157,14 +159,29 @@ describe RemoteTheme do
 
       scheme = ColorScheme.find_by(theme_id: @theme.id)
       expect(scheme.colors.find_by(name: 'tertiary_low_color')).to eq(nil)
+    end
 
-      # It should detect local changes
-      @theme.set_field(target: :common, name: :scss, value: 'body {background-color: blue};')
-      @theme.save
-      @theme.reload
+    it "can update themes with overwritten history" do
+      theme = RemoteTheme.import_theme(initial_repo)
+      remote = theme.remote_theme
 
-      expect(remote.diff_local_changes[:diff]).not_to include("similarity index 100%")
-      expect(remote.diff_local_changes[:diff]).to include("background-color: blue")
+      old_version = `cd #{initial_repo} && git rev-parse HEAD`.strip
+      expect(theme.name).to eq('awesome theme')
+      expect(remote.remote_url).to eq(initial_repo)
+      expect(remote.local_version).to eq(old_version)
+      expect(remote.remote_version).to eq(old_version)
+
+      `cd #{initial_repo} && git commit --amend -m "amended commit"`
+      new_version = `cd #{initial_repo} && git rev-parse HEAD`.strip
+
+      # make sure that the amended commit does not exist anymore
+      `cd #{initial_repo} && git reflog expire --all --expire=now`
+      `cd #{initial_repo} && git prune`
+
+      remote.update_remote_version
+      expect(remote.reload.local_version).to eq(old_version)
+      expect(remote.reload.remote_version).to eq(new_version)
+      expect(remote.reload.commits_behind).to eq(-1)
     end
   end
 

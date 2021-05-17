@@ -113,7 +113,18 @@ export class Tag {
   }
 
   static allowedTags() {
-    return ["ins", "del", "small", "big", "kbd", "ruby", "rt", "rb", "rp"];
+    return [
+      "ins",
+      "del",
+      "small",
+      "big",
+      "kbd",
+      "ruby",
+      "rt",
+      "rb",
+      "rp",
+      "mark",
+    ];
   }
 
   static block(name, prefix, suffix) {
@@ -273,7 +284,13 @@ export class Tag {
 
         if (attr.href && text !== attr.href) {
           text = text.replace(/\n{2,}/g, "\n");
-          return "[" + text + "](" + attr.href + ")";
+
+          let linkModifier = "";
+          if (attr.class && attr.class.includes("attachment")) {
+            linkModifier = "|attachment";
+          }
+
+          return "[" + text + linkModifier + "](" + attr.href + ")";
         }
 
         return text;

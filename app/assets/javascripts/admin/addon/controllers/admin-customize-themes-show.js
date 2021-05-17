@@ -1,21 +1,21 @@
-import I18n from "I18n";
-import { makeArray } from "discourse-common/lib/helpers";
+import { COMPONENTS, THEMES } from "admin/models/theme";
 import {
   empty,
   filterBy,
-  match,
   mapBy,
+  match,
   notEmpty,
 } from "@ember/object/computed";
 import Controller from "@ember/controller";
+import EmberObject from "@ember/object";
+import I18n from "I18n";
+import ThemeSettings from "admin/models/theme-settings";
+import bootbox from "bootbox";
 import discourseComputed from "discourse-common/utils/decorators";
-import { url } from "discourse/lib/computed";
+import { makeArray } from "discourse-common/lib/helpers";
 import { popupAjaxError } from "discourse/lib/ajax-error";
 import showModal from "discourse/lib/show-modal";
-import ThemeSettings from "admin/models/theme-settings";
-import { THEMES, COMPONENTS } from "admin/models/theme";
-import EmberObject from "@ember/object";
-import bootbox from "bootbox";
+import { url } from "discourse/lib/computed";
 
 const THEME_UPLOAD_VAR = 2;
 
@@ -34,6 +34,11 @@ export default Controller.extend({
   availableActiveComponentsNames: mapBy("availableActiveChildThemes", "name"),
   childThemesNames: mapBy("model.childThemes", "name"),
   extraFiles: filterBy("model.theme_fields", "target", "extra_js"),
+
+  @discourseComputed("model.component", "model.remote_theme")
+  showCheckboxes() {
+    return !this.model.component || this.model.remote_theme;
+  },
 
   @discourseComputed("model.editedFields")
   editedFieldsFormatted() {
@@ -146,6 +151,15 @@ export default Controller.extend({
 
   hasTranslations: notEmpty("translations"),
 
+  @discourseComputed(
+    "model.remote_theme.local_version",
+    "model.remote_theme.remote_version",
+    "model.remote_theme.commits_behind"
+  )
+  hasOverwrittenHistory(localVersion, remoteVersion, commitsBehind) {
+    return localVersion !== remoteVersion && commitsBehind === -1;
+  },
+
   @discourseComputed("model.remoteError", "updatingRemote")
   showRemoteError(errorMessage, updating) {
     return errorMessage && !updating;
@@ -215,6 +229,11 @@ export default Controller.extend({
     return remoteThemeBranch
       ? `${remoteThemeUrl.replace(/\.git$/, "")}/tree/${remoteThemeBranch}`
       : remoteThemeUrl;
+  },
+
+  @discourseComputed("model.user.id", "model.default")
+  showConvert(userId, defaultTheme) {
+    return userId > 0 && !defaultTheme;
   },
 
   actions: {
@@ -304,6 +323,10 @@ export default Controller.extend({
       this.model.saveChanges("user_selectable");
     },
 
+    applyAutoUpdateable() {
+      this.model.saveChanges("auto_update");
+    },
+
     addChildTheme() {
       let themeId = parseInt(this.selectedChildThemeId, 10);
       let theme = this.allThemes.findBy("id", themeId);
@@ -351,25 +374,29 @@ export default Controller.extend({
 
     switchType() {
       const relatives = this.get("model.component")
-        ? this.parentThemes
+        ? this.get("model.parentThemes")
         : this.get("model.childThemes");
+
+      let message = I18n.t(`${this.convertKey}_alert_generic`);
+
       if (relatives && relatives.length > 0) {
-        const names = relatives.map((relative) => relative.get("name"));
-        bootbox.confirm(
-          I18n.t(`${this.convertKey}_alert`, {
-            relatives: names.join(", "),
-          }),
-          I18n.t("no_value"),
-          I18n.t("yes_value"),
-          (result) => {
-            if (result) {
-              this.commitSwitchType();
-            }
-          }
-        );
-      } else {
-        this.commitSwitchType();
+        message = I18n.t(`${this.convertKey}_alert`, {
+          relatives: relatives
+            .map((relative) => relative.get("name"))
+            .join(", "),
+        });
       }
+
+      bootbox.confirm(
+        message,
+        I18n.t("no_value"),
+        I18n.t("yes_value"),
+        (result) => {
+          if (result) {
+            this.commitSwitchType();
+          }
+        }
+      );
     },
 
     enableComponent() {

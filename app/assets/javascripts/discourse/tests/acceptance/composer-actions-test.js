@@ -1,18 +1,18 @@
-import { queryAll } from "discourse/tests/helpers/qunit-helpers";
-import { exists } from "discourse/tests/helpers/qunit-helpers";
-import { click, fillIn, visit } from "@ember/test-helpers";
-import { test } from "qunit";
-import I18n from "I18n";
-import selectKit from "discourse/tests/helpers/select-kit-helper";
 import {
   acceptance,
+  exists,
+  queryAll,
   updateCurrentUser,
 } from "discourse/tests/helpers/qunit-helpers";
-import { _clearSnapshots } from "select-kit/components/composer-actions";
-import { toggleCheckDraftPopup } from "discourse/controllers/composer";
+import { click, fillIn, visit } from "@ember/test-helpers";
 import Draft from "discourse/models/draft";
+import I18n from "I18n";
 import { Promise } from "rsvp";
+import { _clearSnapshots } from "select-kit/components/composer-actions";
+import selectKit from "discourse/tests/helpers/select-kit-helper";
 import sinon from "sinon";
+import { test } from "qunit";
+import { toggleCheckDraftPopup } from "discourse/controllers/composer";
 
 acceptance("Composer Actions", function (needs) {
   needs.user();
@@ -61,7 +61,12 @@ acceptance("Composer Actions", function (needs) {
     await composerActions.expand();
     await composerActions.selectRowByValue("reply_as_private_message");
 
-    assert.equal(queryAll(".users-input .item:eq(0)").text(), "codinghorror");
+    assert.equal(
+      queryAll("#private-message-users .selected-name:nth-of-type(1)")
+        .text()
+        .trim(),
+      "codinghorror"
+    );
     assert.ok(
       queryAll(".d-editor-input").val().indexOf("Continuing the discussion") >=
         0
@@ -105,11 +110,25 @@ acceptance("Composer Actions", function (needs) {
       "test replying as whisper to topic when initially not a whisper"
     );
 
+    assert.ok(
+      queryAll(".composer-actions svg.d-icon-far-eye-slash").length === 0,
+      "whisper icon is not visible"
+    );
+    assert.ok(
+      queryAll(".composer-actions svg.d-icon-share").length === 1,
+      "reply icon is visible"
+    );
+
     await composerActions.expand();
     await composerActions.selectRowByValue("toggle_whisper");
 
     assert.ok(
-      queryAll(".composer-fields .whisper .d-icon-far-eye-slash").length === 1
+      queryAll(".composer-actions svg.d-icon-far-eye-slash").length === 1,
+      "whisper icon is visible"
+    );
+    assert.ok(
+      queryAll(".composer-actions svg.d-icon-share").length === 0,
+      "reply icon is not visible"
     );
   });
 
@@ -161,7 +180,7 @@ acceptance("Composer Actions", function (needs) {
     await composerActions.selectRowByValue("reply_as_new_group_message");
 
     const items = [];
-    queryAll(".users-input .item").each((_, item) =>
+    queryAll("#private-message-users .selected-name").each((_, item) =>
       items.push(item.textContent.trim())
     );
 
@@ -272,24 +291,74 @@ acceptance("Composer Actions", function (needs) {
     await click("article#post_3 button.reply");
 
     assert.ok(
-      queryAll(".composer-fields .no-bump").length === 0,
-      "no-bump text is not visible"
+      queryAll(".composer-actions svg.d-icon-anchor").length === 0,
+      "no-bump icon is not visible"
+    );
+    assert.ok(
+      queryAll(".composer-actions svg.d-icon-share").length === 1,
+      "reply icon is visible"
     );
 
     await composerActions.expand();
     await composerActions.selectRowByValue("toggle_topic_bump");
 
     assert.ok(
-      queryAll(".composer-fields .no-bump").length === 1,
+      queryAll(".composer-actions svg.d-icon-anchor").length === 1,
       "no-bump icon is visible"
     );
+    assert.ok(
+      queryAll(".composer-actions svg.d-icon-share").length === 0,
+      "reply icon is not visible"
+    );
 
     await composerActions.expand();
     await composerActions.selectRowByValue("toggle_topic_bump");
 
     assert.ok(
-      queryAll(".composer-fields .no-bump").length === 0,
+      queryAll(".composer-actions svg.d-icon-anchor").length === 0,
       "no-bump icon is not visible"
+    );
+    assert.ok(
+      queryAll(".composer-actions svg.d-icon-share").length === 1,
+      "reply icon is visible"
+    );
+  });
+
+  test("replying to post - whisper and no bump", async function (assert) {
+    const composerActions = selectKit(".composer-actions");
+
+    await visit("/t/internationalization-localization/280");
+    await click("article#post_3 button.reply");
+
+    assert.ok(
+      queryAll(".composer-actions svg.d-icon-far-eye-slash").length === 0,
+      "whisper icon is not visible"
+    );
+    assert.ok(
+      queryAll(".composer-fields .whisper .d-icon-anchor").length === 0,
+      "no-bump icon is not visible"
+    );
+    assert.ok(
+      queryAll(".composer-actions svg.d-icon-share").length === 1,
+      "reply icon is visible"
+    );
+
+    await composerActions.expand();
+    await composerActions.selectRowByValue("toggle_topic_bump");
+    await composerActions.expand();
+    await composerActions.selectRowByValue("toggle_whisper");
+
+    assert.ok(
+      queryAll(".composer-actions svg.d-icon-far-eye-slash").length === 1,
+      "whisper icon is visible"
+    );
+    assert.ok(
+      queryAll(".composer-fields .no-bump .d-icon-anchor").length === 1,
+      "no-bump icon is visible"
+    );
+    assert.ok(
+      queryAll(".composer-actions svg.d-icon-share").length === 0,
+      "reply icon is not visible"
     );
   });
 
@@ -344,7 +413,12 @@ acceptance("Composer Actions", function (needs) {
     await composerActions.expand();
     await composerActions.selectRowByValue("reply_as_private_message");
 
-    assert.equal(queryAll(".users-input .item:eq(0)").text(), "uwe_keim");
+    assert.equal(
+      queryAll("#private-message-users .selected-name:nth-of-type(1)")
+        .text()
+        .trim(),
+      "uwe_keim"
+    );
     assert.ok(
       queryAll(".d-editor-input").val().indexOf("Continuing the discussion") >=
         0
@@ -417,6 +491,10 @@ acceptance("Composer Actions With New Topic Draft", function (needs) {
       assert.equal(
         queryAll("#reply-control .btn-primary.create .d-button-label").text(),
         I18n.t("composer.create_shared_draft")
+      );
+      assert.ok(
+        queryAll(".composer-actions svg.d-icon-far-clipboard").length === 1,
+        "shared draft icon is visible"
       );
 
       assert.ok(queryAll("#reply-control.composing-shared-draft").length === 1);

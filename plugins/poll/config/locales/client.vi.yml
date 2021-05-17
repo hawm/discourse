@@ -14,6 +14,14 @@ vi:
       average_rating: "Trung bình: <strong>%{average}</strong>."
       public:
         title: "Bình chọn <strong>công khai</strong>"
+      multiple:
+        help:
+          at_least_min_options:
+            other: "Chọn ít nhất <strong>%{count}</strong> tùy chọn."
+          up_to_max_options:
+            other: "Chọn tối đa <strong>%{count}</strong> tùy chọn."
+          x_options:
+            other: "Chọn <strong>%{count}</strong> tùy chọn."
       cast-votes:
         title: "Thay đổi bình chọn của bạn"
         label: "Bình chọn ngay!"
@@ -46,13 +54,7 @@ vi:
           regular: Một lựa chọn
           multiple: Nhiều lựa chọn
           number: Xếp hạng
-        poll_result:
-          label: Kết quả
         poll_config:
-          max: Tối đa
-          min: Tối thiểu
           step: Bước
         poll_public:
           label: Hiển thị người đã bình chọn
-        poll_options:
-          label: Nhập mỗi lựa chọn trong thăm dò vào một dòng
