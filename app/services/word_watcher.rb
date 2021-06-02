@@ -8,7 +8,7 @@ class WordWatcher
 
   def self.words_for_action(action)
     words = WatchedWord.where(action: WatchedWord.actions[action.to_sym]).limit(1000)
-    if action.to_sym == :replace || action.to_sym == :tag
+    if WatchedWord.has_replacement?(action.to_sym)
       words.pluck(:word, :replacement).to_h
     else
       words.pluck(:word)
@@ -31,7 +31,7 @@ class WordWatcher
   def self.word_matcher_regexp(action, raise_errors: false)
     words = get_cached_words(action)
     if words
-      if action.to_sym == :replace || action.to_sym == :tag
+      if WatchedWord.has_replacement?(action.to_sym)
         words = words.keys
       end
       words = words.map do |w|
@@ -49,6 +49,12 @@ class WordWatcher
   rescue RegexpError
     raise if raise_errors
     nil # Admin will be alerted via admin_dashboard_data.rb
+  end
+
+  def self.word_matcher_regexps(action)
+    if words = get_cached_words(action)
+      words.map { |w, r| [word_to_regexp(w), r] }.to_h
+    end
   end
 
   def self.word_to_regexp(word)
@@ -80,6 +86,10 @@ class WordWatcher
 
   def should_block?
     word_matches_for_action?(:block, all_matches: true)
+  end
+
+  def should_silence?
+    word_matches_for_action?(:silence)
   end
 
   def word_matches_for_action?(action, all_matches: false)

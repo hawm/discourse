@@ -128,7 +128,7 @@ export function ajax() {
         Session.current().set("csrfToken", null);
       }
 
-      // If it's a parsererror, don't reject
+      // If it's a parser error, don't reject
       if (xhr.status === 200) {
         return args.success(xhr);
       }
@@ -160,10 +160,6 @@ export function ajax() {
 
     if (args.dataType === "script") {
       args.headers["Discourse-Script"] = true;
-    }
-
-    if (args.type === "GET" && args.cache !== true) {
-      args.cache = true; // Disable JQuery cache busting param, which was created to deal with IE8
     }
 
     ajaxObj = $.ajax(getURL(url), args);

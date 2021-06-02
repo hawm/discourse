@@ -284,10 +284,21 @@
         }
       }
 
-      &:hover,
-      &:focus {
+      &:hover {
         background-color: var(--highlight-medium);
         outline: none;
+      }
+
+      &:focus-within {
+        background: var(--highlight-medium);
+        a {
+          // we don't need the link focus because we're styling the parent
+          outline: 0;
+        }
+        .btn-flat:focus {
+          // undo default btn-flat style
+          background: transparent;
+        }
       }
 
       a {
@@ -455,8 +466,11 @@ div.menu-links-header {
 
   button:hover,
   button:focus {
-    background-color: var(--highlight-medium);
+    background-color: var(--primary-low);
     outline: none;
+    &.active {
+      background-color: var(--primary-very-low);
+    }
   }
   button {
     padding: 0.3em 0.5em;
